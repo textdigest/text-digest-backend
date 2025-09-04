@@ -49,6 +49,13 @@ jobs:
               working-directory: ./terraform
               run: terraform validate
 
+            - name: Terraform Plan
+              working-directory: ./terraform
+              env:
+                  TF_VAR_environment: ${{ steps.env.outputs.environment }}
+              run: |
+                  terraform plan -var="environment=${{ steps.env.outputs.environment }}" -out=tfplan
+
             - name: Terraform Apply (ECR)
               working-directory: ./terraform
               env:
@@ -80,4 +87,4 @@ jobs:
               env:
                   TF_VAR_environment: ${{ steps.env.outputs.environment }}
               run: |
-                  terraform apply -auto-approve
+                  terraform apply -auto-approve tfplan
