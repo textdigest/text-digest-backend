@@ -13,26 +13,9 @@ resource "aws_lambda_permission" "http_api" {
   depends_on = [aws_lambda_function.api, aws_apigatewayv2_api.http_api]
 }
 
-resource "aws_iam_policy" "lambda_ecr_policy" {
-  name = "${var.project_name}-lambda-ecr-policy-${var.environment}"
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:GetAuthorizationToken"
-        ]
-        Resource = "arn:aws:ecr:${var.aws_region}:${data.aws_caller_identity.current.account_id}:repository/${var.project_name}-api-container-*"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_ecr_attachment" {
+resource "aws_iam_role_policy_attachment" "lambda_ecr_managed" {
   role       = aws_iam_role.lambda_execution.name
-  policy_arn = aws_iam_policy.lambda_ecr_policy.arn
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+  
+  depends_on = [aws_iam_role.lambda_execution]
 }
