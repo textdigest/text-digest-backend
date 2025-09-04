@@ -87,4 +87,4 @@ jobs:
               env:
                   TF_VAR_environment: ${{ steps.env.outputs.environment }}
               run: |
-                  terraform apply -auto-approve tfplan
+                  terraform apply -auto-approve
