@@ -3,7 +3,6 @@ resource "aws_apigatewayv2_api" "http_api" {
   protocol_type = "HTTP"
   
   cors_configuration {
-    allow_credentials = true
     allow_headers     = ["*"]
     allow_methods     = ["*"]
     allow_origins     = ["*"]
@@ -12,6 +11,11 @@ resource "aws_apigatewayv2_api" "http_api" {
   
   tags = {
     Name = "${var.project_name}-http-api"
+  }
+
+  lifecycle {
+    ignore_changes = [cors_configuration]
+    create_before_destroy = true
   }
 }
 
@@ -35,6 +39,12 @@ resource "aws_apigatewayv2_stage" "http_stage" {
       integrationErrorMessage = "$context.integrationErrorMessage"
     })
   }
+
+  lifecycle {
+    ignore_changes = [access_log_settings, auto_deploy]
+  }
+
+  depends_on = [aws_cloudwatch_log_group.http_api]
 }
 
 resource "aws_apigatewayv2_integration" "http_lambda" {
@@ -45,6 +55,11 @@ resource "aws_apigatewayv2_integration" "http_lambda" {
   integration_method        = "POST"
   integration_uri           = aws_lambda_function.api.invoke_arn
   payload_format_version    = "2.0"
+
+  lifecycle {
+    ignore_changes = [integration_uri]
+  }
+  depends_on = [aws_lambda_function.api]
 }
 
 resource "aws_apigatewayv2_route" "http_route" {
@@ -52,4 +67,6 @@ resource "aws_apigatewayv2_route" "http_route" {
   route_key = "ANY /{proxy+}"
   
   target = "integrations/${aws_apigatewayv2_integration.http_lambda.id}"
+
+  depends_on = [aws_apigatewayv2_integration.http_lambda]
 }
