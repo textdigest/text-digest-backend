@@ -61,7 +61,7 @@ jobs:
               env:
                   TF_VAR_environment: ${{ steps.env.outputs.environment }}
               run: |
-                  terraform apply -auto-approve -target=aws_ecr_repository.api
+                  terraform apply -auto-approve -target=module.resources.aws_ecr_repository.api
 
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v3
