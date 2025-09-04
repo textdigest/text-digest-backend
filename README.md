@@ -73,7 +73,14 @@ root/
 │
 ├── Dockerfile                  # AWS Deployment container
 ├── .github/                   # CI/CD workflows
-└── terraform/                 # IaC
+│
+└── terraform/                      # IaC
+    ├── main.tf                     # Entry point - orchestrates everything
+    ├── provider.tf                 # AWS provider configuration
+    ├── variables.tf                # Input variables (customizable settings)
+    ├── outputs.tf                  # Output values (URLs, IDs, etc.)
+    └── resources/
+        └── [aws_service_name].tf   # Individual service configurations
 ```
 
 ## Deployment
