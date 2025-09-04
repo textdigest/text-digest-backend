@@ -89,7 +89,6 @@ jobs:
                   echo "- **Environment**: ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Branch**: ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **API Gateway URL**: ${{ steps.api-url.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
                   if [ "${{ steps.api-url.outputs.api_url }}" != "Not available" ]; then
                     echo "- **Health Check**: ${{ steps.api-url.outputs.api_url }}/api/v1/health/" >> $GITHUB_STEP_SUMMARY
                   fi
