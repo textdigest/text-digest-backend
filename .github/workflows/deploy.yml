@@ -54,7 +54,6 @@ jobs:
               env:
                   TF_VAR_environment: ${{ steps.env.outputs.environment }}
               run: |
-                  cd terraform
                   terraform plan -var="environment=${{ steps.env.outputs.environment }}" -out=tfplan
 
             - name: Terraform Apply
@@ -62,7 +61,6 @@ jobs:
               env:
                   TF_VAR_environment: ${{ steps.env.outputs.environment }}
               run: |
-                  cd terraform
                   terraform apply -auto-approve tfplan
 
             - name: Set up Docker Buildx
@@ -83,13 +81,3 @@ jobs:
 
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-            - name: Deployment Summary
-              run: |
-                  echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Environment**: ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Branch**: ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
-                  echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-                  if [ "${{ steps.api-url.outputs.api_url }}" != "Not available" ]; then
-                    echo "- **Health Check**: ${{ steps.api-url.outputs.api_url }}/api/v1/health/" >> $GITHUB_STEP_SUMMARY
-                  fi
