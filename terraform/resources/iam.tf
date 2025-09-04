@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 resource "aws_lambda_permission" "http_api" {
   statement_id  = "AllowHTTPAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"
