@@ -13,9 +13,8 @@ resource "aws_lambda_permission" "http_api" {
   depends_on = [aws_lambda_function.api, aws_apigatewayv2_api.http_api]
 }
 
-resource "aws_iam_role_policy" "lambda_ecr_access" {
+resource "aws_iam_policy" "lambda_ecr_policy" {
   name = "${var.project_name}-lambda-ecr-policy-${var.environment}"
-  role = aws_iam_role.lambda_execution.id
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -31,10 +30,9 @@ resource "aws_iam_role_policy" "lambda_ecr_access" {
       }
     ]
   })
+}
 
-  lifecycle {
-    ignore_changes = [policy]
-  }
-
-  depends_on = [aws_iam_role.lambda_execution]
+resource "aws_iam_role_policy_attachment" "lambda_ecr_attachment" {
+  role       = aws_iam_role.lambda_execution.name
+  policy_arn = aws_iam_policy.lambda_ecr_policy.arn
 }
