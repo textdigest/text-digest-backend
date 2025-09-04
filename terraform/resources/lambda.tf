@@ -39,6 +39,7 @@ resource "aws_lambda_function" "api" {
   
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy.lambda_ecr_access,
     aws_ecr_repository.api
   ]
   
