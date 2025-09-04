@@ -1,0 +1,95 @@
+name: Deploy to AWS
+
+on:
+    pull_request:
+        types: [closed]
+        branches: [staging, prod]
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        permissions:
+            id-token: write
+            contents: read
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
+
+            - name: Determine Environment
+              id: env
+              run: |
+                  if [ "${{ github.event.pull_request.base.ref }}" = "prod" ]; then
+                    echo "environment=prod" >> $GITHUB_OUTPUT
+                    echo "ENVIRONMENT: prod"
+                  elif [ "${{ github.event.pull_request.base.ref }}" = "staging" ]; then
+                    echo "environment=staging" >> $GITHUB_OUTPUT
+                    echo "ENVIRONMENT: staging"
+                  else
+                    exit 1
+                  fi
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v4
+              with:
+                  role-to-assume: ${{ secrets.AWS_CICD_ARN }}
+                  aws-region: us-east-1
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Build and Push Docker Image
+              env:
+                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  ECR_REPOSITORY: text-digest-api-${{ steps.env.outputs.environment }}
+                  IMAGE_TAG: ${{ github.sha }}
+              run: |
+                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./src
+                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest ./src
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: "1.5.0"
+
+            - name: Terraform Init
+              working-directory: ./terraform
+              run: terraform init
+
+            - name: Terraform Validate
+              working-directory: ./terraform
+              run: terraform validate
+
+            - name: Terraform Plan
+              working-directory: ./terraform
+              env:
+                  TF_VAR_environment: ${{ steps.env.outputs.environment }}
+              run: |
+                  cd terraform
+                  terraform plan -var="environment=${{ steps.env.outputs.environment }}" -out=tfplan
+
+            - name: Terraform Apply
+              working-directory: ./terraform
+              env:
+                  TF_VAR_environment: ${{ steps.env.outputs.environment }}
+              run: |
+                  cd terraform
+                  terraform apply -auto-approve tfplan
+
+            - name: Deployment Summary
+              run: |
+                  echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Environment**: ${{ steps.env.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Branch**: ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **API Gateway URL**: ${{ steps.api-url.outputs.api_url }}" >> $GITHUB_STEP_SUMMARY
+                  if [ "${{ steps.api-url.outputs.api_url }}" != "Not available" ]; then
+                    echo "- **Health Check**: ${{ steps.api-url.outputs.api_url }}/api/v1/health/" >> $GITHUB_STEP_SUMMARY
+                  fi
