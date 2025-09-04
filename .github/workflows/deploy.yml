@@ -82,6 +82,17 @@ jobs:
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
+            - name: Wait for ECR image to be available
+              env:
+                  AWS_REGION: us-east-1
+                  REPO: text-digest-api-container-${{ steps.env.outputs.environment }}
+              run: |
+                  echo "Waiting for image $REPO:latest to be available in ECR..."
+                  for i in {1..30}; do
+                    aws ecr describe-images --repository-name "$REPO" --image-ids imageTag=latest --region "$AWS_REGION" >/dev/null 2>&1 && break
+                    echo "Image not visible yet (attempt $i). Waiting 10s..." && sleep 10
+                  done
+
             - name: Terraform Apply (full)
               working-directory: ./terraform
               env:
