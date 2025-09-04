@@ -15,6 +15,11 @@ resource "aws_iam_role" "lambda_execution" {
   tags = {
     Name = "${var.project_name}-lambda-role"
   }
+
+  lifecycle {
+    ignore_changes = [name, assume_role_policy, managed_policy_arns]
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lambda_function" "api" {
@@ -33,7 +38,8 @@ resource "aws_lambda_function" "api" {
   }
   
   depends_on = [
-    aws_iam_role_policy_attachment.lambda_basic
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_ecr_repository.api
   ]
   
   tags = {
@@ -44,4 +50,9 @@ resource "aws_lambda_function" "api" {
 resource "aws_iam_role_policy_attachment" "lambda_basic" {
   role       = aws_iam_role.lambda_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+
+  lifecycle {
+    ignore_changes = [role, policy_arn]
+  }
+  depends_on = [aws_iam_role.lambda_execution]
 }

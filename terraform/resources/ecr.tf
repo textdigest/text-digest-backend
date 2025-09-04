@@ -4,6 +4,11 @@ resource "aws_ecr_repository" "api" {
   tags = {
     Name = "${var.project_name}-api-container"
   }
+
+  lifecycle {
+    ignore_changes = [image_scanning_configuration, image_tag_mutability]
+    create_before_destroy = true
+  }
 }
 
 resource "aws_ecr_lifecycle_policy" "api" {
@@ -23,4 +28,9 @@ resource "aws_ecr_lifecycle_policy" "api" {
       }
     }]
   })
+
+  lifecycle {
+    ignore_changes = [policy]
+  }
+  depends_on = [aws_ecr_repository.api]
 }
