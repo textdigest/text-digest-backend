@@ -36,25 +36,6 @@ jobs:
                   role-to-assume: ${{ secrets.AWS_CICD_ARN }}
                   aws-region: us-east-1
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
-
-            - name: Login to Amazon ECR
-              id: login-ecr
-              uses: aws-actions/amazon-ecr-login@v2
-
-            - name: Build and Push Docker Image
-              env:
-                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-                  ECR_REPOSITORY: text-digest-api-container-${{ steps.env.outputs.environment }}
-                  IMAGE_TAG: ${{ github.sha }}
-              run: |
-                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
-                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
             - name: Setup Terraform
               uses: hashicorp/setup-terraform@v3
               with:
@@ -83,6 +64,25 @@ jobs:
               run: |
                   cd terraform
                   terraform apply -auto-approve tfplan
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v3
+
+            - name: Login to Amazon ECR
+              id: login-ecr
+              uses: aws-actions/amazon-ecr-login@v2
+
+            - name: Build and Push Docker Image
+              env:
+                  ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+                  ECR_REPOSITORY: text-digest-api-container-${{ steps.env.outputs.environment }}
+                  IMAGE_TAG: ${{ github.sha }}
+              run: |
+                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+                  docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+                  docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
             - name: Deployment Summary
               run: |
