@@ -21,3 +21,8 @@ variable "lambda_memory_size" {
   type    = number
   default = 256
 }
+
+variable "image_tag" {
+  type    = string
+  default = "latest"
+}

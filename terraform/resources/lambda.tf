@@ -25,7 +25,7 @@ resource "aws_iam_role" "lambda_execution" {
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-api-${var.environment}"
   package_type  = "Image"
-  image_uri     = "${aws_ecr_repository.api.repository_url}:latest"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
   role          = aws_iam_role.lambda_execution.arn
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
