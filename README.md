@@ -97,10 +97,7 @@ All deployment is automated by GitHub Actions + Terraform
 
 -   **API Gateway** - API Hosting
 -   **Lambda** - Compute
+-   **S3** - BLOB Store
 -   **DynamoDB** - Database
 -   **Cognito** - User Authentication
 -   **ECR** - Container registry
-
-## Environment Variables
-
-TBD

@@ -19,4 +19,7 @@ module "resources" {
   lambda_memory_size = var.lambda_memory_size
 
   image_tag = var.image_tag
+
+  google_client_id     = var.google_client_id
+  google_client_secret = var.google_client_secret
 }
