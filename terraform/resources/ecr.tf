@@ -16,10 +16,6 @@ resource "aws_ecr_repository_policy" "api" {
           Service = "lambda.amazonaws.com"
         }
         Action = [
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:SetRepositoryPolicy",
           "ecr:*"
         ]
       }
