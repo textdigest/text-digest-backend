@@ -22,6 +22,13 @@ resource "aws_iam_role" "lambda_execution" {
   }
 }
 
+resource "time_sleep" "wait_iam" {
+  create_duration = "60s"
+  depends_on = [
+    aws_iam_role_policy_attachment.lambda_admin
+  ]
+}
+
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-api-${var.environment}"
   package_type  = "Image"
@@ -38,9 +45,7 @@ resource "aws_lambda_function" "api" {
   }
 
   depends_on = [
-    aws_iam_role_policy.lambda_ecr_pull_inline,
-    aws_iam_role_policy_attachment.lambda_basic,
-    aws_iam_role_policy_attachment.lambda_admin,
+    time_sleep.wait_iam,
     aws_ecr_repository.api
   ]
 
