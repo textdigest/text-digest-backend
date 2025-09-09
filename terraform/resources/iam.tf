@@ -15,7 +15,5 @@ resource "aws_lambda_permission" "lambda-api" {
 
 resource "aws_iam_role_policy_attachment" "lambda_ecr_managed" {
   role       = aws_iam_role.lambda_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-
-  depends_on = [aws_iam_role.lambda_execution]
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaECRImageRetrievalPolicy"
 }
