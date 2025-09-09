@@ -23,3 +23,7 @@ variable "lambda_timeout" {
 variable "lambda_memory_size" {
   type = number
 }
+
+variable "image_tag" {
+  type = string
+}

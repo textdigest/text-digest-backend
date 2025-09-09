@@ -1,10 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "text-digest-terraform-state"
-    key            = "staging/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "terraform-locks"
-    encrypt        = true
+    bucket  = "text-digest-terraform-state"
+    key     = "${terraform.workspace}/terraform.tfstate"
+    region  = "us-east-1"
+    encrypt = true
   }
 }
 
@@ -18,4 +17,6 @@ module "resources" {
 
   lambda_timeout     = var.lambda_timeout
   lambda_memory_size = var.lambda_memory_size
+
+  image_tag = var.image_tag
 }
