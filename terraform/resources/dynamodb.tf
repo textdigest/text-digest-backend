@@ -1,16 +1,16 @@
 resource "aws_dynamodb_table" "this" {
   name         = "${var.project_name}-${var.environment}-table"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key     = "itemId"
-  range_key    = "itemType"
+  hash_key     = "PK"
+  range_key    = "SK"
 
   attribute {
-    name = "itemId"
+    name = "PK"
     type = "S"
   }
 
   attribute {
-    name = "itemType"
+    name = "SK"
     type = "S"
   }
 }
