@@ -1,6 +1,6 @@
 resource "aws_iam_role" "lambda_execution" {
   name = "${var.project_name}-lambda-${var.environment}"
-  
+
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
@@ -11,13 +11,13 @@ resource "aws_iam_role" "lambda_execution" {
       }
     }]
   })
-  
+
   tags = {
     Name = "${var.project_name}-lambda-role"
   }
 
   lifecycle {
-    ignore_changes = [name, assume_role_policy]
+    ignore_changes        = [name, assume_role_policy]
     create_before_destroy = true
   }
 }
@@ -29,20 +29,20 @@ resource "aws_lambda_function" "api" {
   role          = aws_iam_role.lambda_execution.arn
   timeout       = var.lambda_timeout
   memory_size   = var.lambda_memory_size
-  
+
   environment {
     variables = {
       ENVIRONMENT = var.environment
       REGION      = var.aws_region
     }
   }
-  
+
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_ecr_managed,
     aws_ecr_repository.api
   ]
-  
+
   tags = {
     Name = "${var.project_name}-lambda-function"
   }
