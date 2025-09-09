@@ -12,10 +12,6 @@ variable "project_name" {
   type = string
 }
 
-variable "service_name" {
-  type = string
-}
-
 variable "lambda_timeout" {
   type    = number
   default = 30
