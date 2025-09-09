@@ -51,13 +51,7 @@ jobs:
                   terraform -chdir=terraform plan \
                     -var "project_name=${PROJECT_NAME}" \
                     -var "environment=${ENVIRONMENT}" \
-                    -var "image_tag=${IMAGE_TAG}" \
                     -out plan.out
 
             - name: Terraform Apply
-              run: |
-                  terraform -chdir=terraform apply \
-                    -var "project_name=${PROJECT_NAME}" \
-                    -var "environment=${ENVIRONMENT}" \
-                    -var "image_tag=${IMAGE_TAG}" \
-                    -out plan.out
+              run: terraform -chdir=terraform apply -input=false -auto-approve plan.out
