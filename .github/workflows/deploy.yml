@@ -44,13 +44,15 @@ jobs:
               run: terraform -chdir=terraform init -input=false -backend-config="bucket=text-digest-terraform-state" -backend-config="key=${ENVIRONMENT}/terraform.tfstate"
 
             - name: Select workspace
-              run: terraform -chdir=terraform workspace select ${ENVIRONMENT} \
-                  || terraform -chdir=terraform workspace new ${ENVIRONMENT}
+              run: |
+                  terraform -chdir=terraform workspace select ${ENVIRONMENT} || \
+                  terraform -chdir=terraform workspace new ${ENVIRONMENT}
 
             - name: Terraform apply core infrastructure
-              run: terraform -chdir=terraform apply -input=false -auto-approve \
-                  -var "project_name=${PROJECT_NAME}" \
-                  -var "environment=${ENVIRONMENT}"
+              run: |
+                  terraform -chdir=terraform apply -input=false -auto-approve \
+                    -var "project_name=${PROJECT_NAME}" \
+                    -var "environment=${ENVIRONMENT}"
 
             - name: Build and push image
               env:
@@ -61,7 +63,8 @@ jobs:
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
             - name: Terraform apply lambda using image
-              run: terraform -chdir=terraform apply -input=false -auto-approve \
-                  -var "project_name=${PROJECT_NAME}" \
-                  -var "environment=${ENVIRONMENT}" \
-                  -var "image_tag=${IMAGE_TAG}"
+              run: |
+                  terraform -chdir=terraform apply -input=false -auto-approve \
+                    -var "project_name=${PROJECT_NAME}" \
+                    -var "environment=${ENVIRONMENT}" \
+                    -var "image_tag=${IMAGE_TAG}"
