@@ -36,7 +36,7 @@ def retrieveToken():
     return sub
 
 TABLE = os.getenv("DDB_TABLE", "main-app-test")
-ddb = boto3.client("dynamodb")
+ddb = boto3.client("dynamodb", region_name=REGION)
 
 #Uploads PDF to S3, parse text using OCR  
 @router.post("/post-title")

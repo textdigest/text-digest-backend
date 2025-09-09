@@ -1,0 +1,11 @@
+fastapi
+mangum
+uvicorn
+pydantic
+boto
+python-dotenv
+boto3
+python-jose
+pypdf
+ocrmypdf
+python-multipart
