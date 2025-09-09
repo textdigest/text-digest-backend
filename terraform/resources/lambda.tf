@@ -39,21 +39,11 @@ resource "aws_lambda_function" "api" {
 
   depends_on = [
     aws_iam_role_policy_attachment.lambda_basic,
-    aws_iam_role_policy_attachment.lambda_ecr_managed,
+    aws_iam_role_policy_attachment.lambda_ecr_pull_attach,
     aws_ecr_repository.api
   ]
 
   tags = {
     Name = "${var.project_name}-lambda-function"
   }
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-
-  lifecycle {
-    ignore_changes = [role, policy_arn]
-  }
-  depends_on = [aws_iam_role.lambda_execution]
 }
