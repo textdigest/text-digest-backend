@@ -1,4 +1,4 @@
-resource "aws_cloudwatch_log_group" "http_api" {
+resource "aws_cloudwatch_log_group" "lambda-api" {
   name              = "/aws/apigateway/${var.project_name}-http-api-${var.environment}"
   retention_in_days = 30
 
@@ -7,7 +7,7 @@ resource "aws_cloudwatch_log_group" "http_api" {
   }
 
   lifecycle {
-    ignore_changes = [name, retention_in_days]
+    ignore_changes        = [name, retention_in_days]
     create_before_destroy = true
   }
 }

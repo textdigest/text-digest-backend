@@ -1,5 +1,5 @@
 output "api_gateway_url" {
-  value = aws_apigatewayv2_stage.http_stage.invoke_url
+  value = aws_apigatewayv2_stage.lambda-stage.invoke_url
 }
 
 output "lambda_function_name" {
@@ -11,5 +11,5 @@ output "ecr_repository_url" {
 }
 
 output "api_gateway_log_group" {
-  value = aws_cloudwatch_log_group.http_api.name
+  value = aws_cloudwatch_log_group.lambda-api.name
 }
