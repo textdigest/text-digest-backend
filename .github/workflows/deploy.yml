@@ -45,6 +45,10 @@ jobs:
                   -backend-config="bucket=text-digest-terraform-state" \
                   -backend-config="key=${ENVIRONMENT}/terraform.tfstate"
 
+            - name: Select workspace
+              run: terraform -chdir=terraform workspace select ${ENVIRONMENT} \
+                  || terraform -chdir=terraform workspace new ${ENVIRONMENT}
+
             - name: Terraform apply core infrastructure
               run: terraform -chdir=terraform apply -input=false -auto-approve \
                   -var "project_name=${PROJECT_NAME}" \

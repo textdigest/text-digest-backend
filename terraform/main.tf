@@ -1,7 +1,7 @@
 terraform {
   backend "s3" {
     bucket  = "text-digest-terraform-state"
-    key     = "staging/terraform.tfstate"
+    key     = "${terraform.workspace}/terraform.tfstate"
     region  = "us-east-1"
     encrypt = true
   }
