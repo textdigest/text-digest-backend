@@ -19,17 +19,23 @@ Install the following:
 
 ## Local Development
 
-### 1. Create virtual environment
+### 1. Create virtual environment & select it as your interpreter
 
 ```bash
 py -m venv venv
 source venv/bin/activate
 ```
 
+VS Code:
+
+-   Press Cmd+Shift+P
+-   Type "Python: Select Interpreter"
+-   Choose the one in your venv folder: ./venv/bin/python
+
 ### 2. Install dependencies
 
 ```bash
-pip install -r src/requirements.txt
+pip install -r requirements.txt
 ```
 
 ### 3. Run locally
