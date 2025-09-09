@@ -26,7 +26,7 @@ resource "aws_apigatewayv2_route" "lambda_route" {
 resource "aws_lambda_permission" "api-gateway" {
   statement_id  = "AllowExecutionFromAPIGateway"
   action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.lambda_model_function.arn
+  function_name = aws_lambda_function.api.arn
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.lambda-api.execution_arn}/*/*/*"
 }
