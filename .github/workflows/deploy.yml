@@ -48,12 +48,6 @@ jobs:
                   terraform -chdir=terraform workspace select ${ENVIRONMENT} || \
                   terraform -chdir=terraform workspace new ${ENVIRONMENT}
 
-            - name: Terraform apply core infrastructure
-              run: |
-                  terraform -chdir=terraform apply -input=false -auto-approve \
-                    -var "project_name=${PROJECT_NAME}" \
-                    -var "environment=${ENVIRONMENT}"
-
             - name: Build and push image
               env:
                   ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -62,7 +56,7 @@ jobs:
                   docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
                   docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-            - name: Terraform apply lambda using image
+            - name: Terraform apply
               run: |
                   terraform -chdir=terraform apply -input=false -auto-approve \
                     -var "project_name=${PROJECT_NAME}" \
