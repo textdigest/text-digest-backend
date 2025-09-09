@@ -9,7 +9,9 @@ resource "aws_iam_policy" "lambda_ecr_pull" {
         Action = [
           "ecr:GetAuthorizationToken",
           "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer"
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:*"
         ],
         Resource = "*"
       }
