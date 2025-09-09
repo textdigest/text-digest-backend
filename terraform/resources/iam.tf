@@ -1,19 +1,28 @@
-data "aws_caller_identity" "current" {}
+resource "aws_iam_policy" "lambda_ecr_pull" {
+  name = "${var.project_name}-lambda-ecr-pull"
 
-resource "aws_lambda_permission" "lambda-api" {
-  statement_id  = "AllowHTTPAPIGatewayInvoke"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.lambda-api.execution_arn}/*/*"
-
-  lifecycle {
-    ignore_changes = [function_name, source_arn]
-  }
-  depends_on = [aws_lambda_function.api, aws_apigatewayv2_api.lambda-api]
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer"
+        ],
+        Resource = "*"
+      }
+    ]
+  })
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_ecr_managed" {
+resource "aws_iam_role_policy_attachment" "lambda_ecr_pull_attach" {
   role       = aws_iam_role.lambda_execution.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaECRImageRetrievalPolicy"
+  policy_arn = aws_iam_policy.lambda_ecr_pull.arn
+}
+
+resource "aws_iam_role_policy_attachment" "lambda_basic" {
+  role       = aws_iam_role.lambda_execution.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
