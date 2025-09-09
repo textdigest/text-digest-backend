@@ -1,72 +1,37 @@
-resource "aws_apigatewayv2_api" "http_api" {
+resource "aws_apigatewayv2_api" "lambda-api" {
   name          = "${var.project_name}-http-api-${var.environment}"
   protocol_type = "HTTP"
-  
-  cors_configuration {
-    allow_headers     = ["*"]
-    allow_methods     = ["*"]
-    allow_origins     = ["*"]
-    expose_headers    = ["*"]
-  }
-  
-  tags = {
-    Name = "${var.project_name}-http-api"
-  }
-
-  lifecycle {
-    ignore_changes = [cors_configuration]
-    create_before_destroy = true
-  }
 }
 
-resource "aws_apigatewayv2_stage" "http_stage" {
-  api_id      = aws_apigatewayv2_api.http_api.id
-  name        = var.environment
+resource "aws_apigatewayv2_stage" "lambda-stage" {
+  api_id      = aws_apigatewayv2_api.lambda-api.id
+  name        = "$default"
   auto_deploy = true
-  
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.http_api.arn
-    format = jsonencode({
-      requestId               = "$context.requestId"
-      sourceIp                = "$context.identity.sourceIp"
-      requestTime             = "$context.requestTime"
-      protocol                = "$context.protocol"
-      httpMethod              = "$context.httpMethod"
-      resourcePath            = "$context.resourcePath"
-      routeKey                = "$context.routeKey"
-      status                  = "$context.status"
-      responseLength          = "$context.responseLength"
-      integrationErrorMessage = "$context.integrationErrorMessage"
-    })
-  }
-
-  lifecycle {
-    ignore_changes = [access_log_settings, auto_deploy]
-  }
-
-  depends_on = [aws_cloudwatch_log_group.http_api]
 }
 
-resource "aws_apigatewayv2_integration" "http_lambda" {
-  api_id           = aws_apigatewayv2_api.http_api.id
-  integration_type = "AWS_PROXY"
-  
-  connection_type           = "INTERNET"
-  integration_method        = "POST"
-  integration_uri           = aws_lambda_function.api.invoke_arn
-  payload_format_version    = "2.0"
-
-  lifecycle {
-    ignore_changes = [integration_uri]
-  }
-  depends_on = [aws_lambda_function.api]
+resource "aws_apigatewayv2_integration" "lambda-integration" {
+  api_id               = aws_apigatewayv2_api.lambda-api.id
+  integration_type     = "AWS_PROXY"
+  integration_method   = "POST"
+  integration_uri      = aws_lambda_function.lambda_model_function.invoke_arn
+  passthrough_behavior = "WHEN_NO_MATCH"
 }
 
-resource "aws_apigatewayv2_route" "http_route" {
-  api_id    = aws_apigatewayv2_api.http_api.id
-  route_key = "ANY /{proxy+}"
-  
-  target = "integrations/${aws_apigatewayv2_integration.http_lambda.id}"
+resource "aws_apigatewayv2_route" "lambda_route" {
+  api_id    = aws_apigatewayv2_api.lambda-api.id
+  route_key = "GET /{proxy+}"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda-integration.id}"
+}
 
-  depends_on = [aws_apigatewayv2_integration.http_lambda]
+resource "aws_lambda_permission" "api-gateway" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lambda_model_function.arn
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.lambda-api.execution_arn}/*/*/*"
+}
+
+output "apigatewayv2_api_api_endpoint" {
+  description = "The URI of the API"
+  value       = try(aws_apigatewayv2_api.lambda-api.api_endpoint, "")
 }
