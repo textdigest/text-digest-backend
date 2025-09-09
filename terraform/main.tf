@@ -17,4 +17,6 @@ module "resources" {
 
   lambda_timeout     = var.lambda_timeout
   lambda_memory_size = var.lambda_memory_size
+
+  image_tag = var.image_tag
 }
