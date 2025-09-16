@@ -1,7 +1,8 @@
 resource "aws_cognito_user_pool" "this" {
   name = "${var.project_name}-${var.environment}-user-pool"
 
-  username_attributes      = ["email"]
+  username_attributes = ["email"]
+
   auto_verified_attributes = ["email"]
 
   admin_create_user_config {
@@ -12,7 +13,9 @@ resource "aws_cognito_user_pool" "this" {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
-
+  lambda_config {
+    pre_sign_up = aws_lambda_function.cognito_pre_signup_auto_confirm.arn
+  }
 }
 
 resource "aws_cognito_identity_provider" "google" {
