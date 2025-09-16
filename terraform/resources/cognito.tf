@@ -1,24 +1,11 @@
 resource "aws_cognito_user_pool" "this" {
   name = "${var.project_name}-${var.environment}-user-pool"
 
-  alias_attributes = ["email"]
+  username_attributes = ["email"]
 
-  password_policy {
-    minimum_length    = 8
-    require_symbols   = false
-    require_lowercase = false
-    require_uppercase = true
-    require_numbers   = true
+  admin_create_user_config {
+    allow_admin_create_user_only = false
   }
-
-  account_recovery_setting {
-    recovery_mechanism {
-      name     = "verified_email"
-      priority = 1
-    }
-  }
-
-  auto_verified_attributes = ["email"]
 
   email_configuration {
     email_sending_account = "COGNITO_DEFAULT"
