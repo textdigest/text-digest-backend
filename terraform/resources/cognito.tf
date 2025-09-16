@@ -19,6 +19,10 @@ resource "aws_cognito_user_pool" "this" {
   }
 
   auto_verified_attributes = ["email"]
+
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
+  }
 }
 
 resource "aws_cognito_identity_provider" "google" {
@@ -62,6 +66,7 @@ resource "aws_cognito_user_pool_client" "this" {
   supported_identity_providers = ["COGNITO", "Google"]
 
   explicit_auth_flows = [
+    "ALLOW_USER_AUTH",
     "ALLOW_USER_SRP_AUTH",
     "ALLOW_REFRESH_TOKEN_AUTH"
   ]
