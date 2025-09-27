@@ -52,7 +52,6 @@ def upload_to_s3(client, pdf_bytes: bytes, filename: str, bucket: str, prefix: s
         # 3) Build S3 key and upload
         base_name = os.path.basename(filename) or os.path.basename(out_path)
         key = f"{prefix}{base_name.rsplit('.', 1)[0]}.searchable.pdf"
-
         client.upload_file(out_path, bucket, key, ExtraArgs={"ContentType": "application/pdf"})
         return {"bucket": bucket, "key": key, "s3_uri": f"s3://{bucket}/{key}"}
     finally:
