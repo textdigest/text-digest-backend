@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, UploadFile, File
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from dotenv import load_dotenv
 import os
 import boto3
 from jose import jwt
-from src.services.library.main import upload_to_s3
+from services.library.main import upload_to_s3
 from datetime import datetime
+from util.tokens.verifyIdToken import verify_token
 
 load_dotenv()
 router = APIRouter()
@@ -74,19 +75,21 @@ async def post_title(title: str, author: str = "N/A", date_published: str = "", 
 
 # Returns all titles in library
 @router.get("/get-titles-all/")
-async def get_titles_all():
-    sub = SUB
+async def get_titles_all(request: Request):
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
     pk = f"USER#{sub}"
-    #Make query to DynamoDB table to search for all books for user
+
     out = ddb.query(
         TableName=TABLE,
         KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
         ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "BOOK#"}},
     )
-    #Result to store all book objects
+
     result = []
     for item in out["Items"]:
         result.append(format_entry(item))
+        
     return result
 
 
