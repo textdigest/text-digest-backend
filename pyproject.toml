@@ -20,6 +20,11 @@ dependencies = [
     "pypdf",
     "ocrmypdf",
     "python-multipart",
+    "openai",
+    "openai-agents",
+    "llama_index",
+    "llama-index-llms-openai",
+    "llama-index-vector-stores-pinecone"
 ]
 
 [project.optional-dependencies]
