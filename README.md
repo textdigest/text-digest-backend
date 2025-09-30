@@ -19,40 +19,32 @@ Install the following:
 
 ## Local Development
 
-### 1. Create virtual environment & select it as your interpreter
+### 1. Run locally
+
+-   Ensure make is installed on your machine.
+-   Use the following command:
 
 ```bash
-py -m venv venv
-source venv/bin/activate
+make dev
 ```
 
-VS Code:
+-   The API will be available at `http://localhost:8000`
 
--   Press Cmd+Shift+P
--   Type "Python: Select Interpreter"
--   Choose the one in your venv folder: ./venv/bin/python
+### 2. Select Interpreter
 
-### 2. Install dependencies
+-   `Cmd+Shift+P` > "Python: Select Interpreter" > `./venv/bin/python`.
 
-```bash
-pip install -r requirements.txt
-```
+### 3. Ping Health to Verify
 
-### 3. Run locally
-
-```bash
-uvicorn src.main:app --reload
-```
-
-The API will be available at `http://localhost:8000`
-
-### 4. Test endpoints
-
-Ping the health check route to verify everything is working:
+-   Ping the health check route to verify everything is working:
 
 ```bash
 curl http://localhost:8000/api/v1/health/
 ```
+
+## Adding Dependecies
+
+-   Any external python dependencies must be added to pyproject.toml
 
 ## Project Structure
 
@@ -88,10 +80,6 @@ root/
     └── resources/
         └── [aws_service_name].tf   # Individual service configurations
 ```
-
-## Deployment
-
-All deployment is automated by GitHub Actions + Terraform
 
 ## AWS Services in Use
 
