@@ -54,6 +54,7 @@ resource "aws_cognito_user_pool_client" "this" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["email", "openid", "profile", "aws.cognito.signin.user.admin"]
 
+
   callback_urls = [
     "http://localhost:3000/library",
     "https://textdigest.ai/library"
