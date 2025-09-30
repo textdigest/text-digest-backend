@@ -30,7 +30,7 @@ resource "aws_cognito_identity_provider" "google" {
   provider_details = {
     client_id        = var.google_client_id
     client_secret    = var.google_client_secret
-    authorize_scopes = "email profile openid aws.cognito.signin.user.admin"
+    authorize_scopes = "email profile openid"
   }
 
   attribute_mapping = {
@@ -54,6 +54,15 @@ resource "aws_cognito_user_pool_client" "this" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                 = ["email", "openid", "profile", "aws.cognito.signin.user.admin"]
 
+  access_token_validity  = 60
+  id_token_validity      = 60
+  refresh_token_validity = 30
+
+  token_validity_units {
+    access_token  = "minutes"
+    id_token      = "minutes"
+    refresh_token = "days"
+  }
 
   callback_urls = [
     "http://localhost:3000/library",
