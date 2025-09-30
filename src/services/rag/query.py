@@ -12,17 +12,16 @@ from .nvidia_embedding import NvidiaEmbedding
 
 Settings.llm = None  # type: ignore
 
-def query_text_embedding(query_text: str, top_k: int, doc_name: Optional[str]) -> dict:
-    print({"query_text": query_text, "top_k": top_k, "doc_name": doc_name})
-    """This tool will retrieve chunks of industry standards documentation related to the query text.
+def query_text_embedding(query_text: str, top_k: int, doc_id: str) -> dict:
+    """This tool will retrieve chunks of relevant documentation related to the query text.
 
     Args:
         query_text (str): Grammatically valid English that will be used to find related industry standards documentation.
         top_k (int): Number of relevant chunks to retrieve. Must be less than 5.
-        doc_name (Optional[str]): Specific document name to filter by (e.g., "OSHA", "TPI", "ISO"). Use None for no filter.
+        doc_id (str): Specify the document via id.
         
     Returns:
-        str: Industry standards documentation.
+        str: Related document content
     """
 
     vector_store = PineconeVectorStore(
@@ -36,11 +35,11 @@ def query_text_embedding(query_text: str, top_k: int, doc_name: Optional[str]) -
     query_embedding = embed_model.get_query_embedding(query_text)
 
     filters = None
-    if doc_name:
+    if doc_id:
         filters = MetadataFilters(filters=[
             MetadataFilter(
-                key="doc_name", 
-                value=doc_name, 
+                key="doc_id", 
+                value=doc_id, 
                 operator=FilterOperator.EQ
             )
         ])
