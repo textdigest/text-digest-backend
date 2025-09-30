@@ -1,6 +1,10 @@
 resource "aws_cognito_user_pool" "this" {
   name = "${var.project_name}-${var.environment}-user-pool"
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   username_attributes = ["email"]
 
   auto_verified_attributes = ["email"]
@@ -26,7 +30,7 @@ resource "aws_cognito_identity_provider" "google" {
   provider_details = {
     client_id        = var.google_client_id
     client_secret    = var.google_client_secret
-    authorize_scopes = "email profile openid"
+    authorize_scopes = "email profile openid aws.cognito.signin.user.admin"
   }
 
   attribute_mapping = {
@@ -40,11 +44,16 @@ resource "aws_cognito_user_pool_client" "this" {
   name         = "${var.project_name}-${var.environment}-app-client"
   user_pool_id = aws_cognito_user_pool.this.id
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
   generate_secret = false
 
   allowed_oauth_flows                  = ["code"]
   allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_scopes                 = ["email", "openid", "profile"]
+  allowed_oauth_scopes                 = ["email", "openid", "profile", "aws.cognito.signin.user.admin"]
+
 
   callback_urls = [
     "http://localhost:3000/library",
