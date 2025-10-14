@@ -1,22 +1,10 @@
-VENV := venv
-PYTHON := $(VENV)/bin/python
-PIP := $(VENV)/bin/pip
-
 .PHONY: help
 help:
 	@echo "Commands:"
-	@echo "  dev    - Setup venv, install from pyproject.toml, run uvicorn (use this every time)"
+	@echo "  dev    - Build and run API in Docker container (use this every time)"
 
 .PHONY: dev
-dev: $(VENV) install
-	@echo "Starting server at http://localhost:8000..."
-	$(PYTHON) -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
-
-$(VENV):
-	python3 -m venv $(VENV)
-	@echo "Venv created at $(VENV)."
-
-.PHONY: install
-install: $(VENV)
-	$(PIP) install -e .
-	@echo "Installed from pyproject.toml (editable mode)."
+dev:
+	@echo "Building and starting server at http://localhost:8000..."
+	docker build -t text-digest-backend .
+	docker run --rm -p 8000:8000 -v $(PWD)/src:/var/task/src -v ~/.aws:/root/.aws:ro --env-file .env -e PYTHONPATH=/var/task/src --entrypoint python text-digest-backend -m uvicorn main:app --reload --host 0.0.0.0 --port 8000

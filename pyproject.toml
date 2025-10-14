@@ -19,8 +19,6 @@ dependencies = [
     "boto3-stubs[essential]",
     "boto3-stubs[textract]",
     "python-jose",
-    "pypdf",
-    "ocrmypdf",
     "python-multipart",
     "openai",
     "openai-agents",
