@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from mangum import Mangum
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.v1.api import router as api_router
+from api.v1.api import router as api_router
 
 app = FastAPI()
 
