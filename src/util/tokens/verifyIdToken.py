@@ -22,7 +22,7 @@ with urllib.request.urlopen(keys_url) as f:
 keys = json.loads(response.decode('utf-8'))['keys']
 
 
-def verify_token(id_token: str) -> str:
+def verify_token(id_token: str | None) -> str:
     """
     Verifies a cognito-issued id token. Throws an error if token is invalid or dne.
     
@@ -40,12 +40,14 @@ def verify_token(id_token: str) -> str:
         user_id = verify_token(auth_header)
     ```
     """
+    if not id_token:
+        raise Exception("Unauthorized")
+
 
     if id_token.startswith("Bearer "):
         id_token = id_token.split(" ", 1)[1]
 
     try:
-
         headers = jwt.get_unverified_headers(id_token)
         kid = headers['kid']
 
@@ -67,13 +69,9 @@ def verify_token(id_token: str) -> str:
         if claims['iss'] != f'https://cognito-idp.us-east-1.amazonaws.com/{POOL_ID}':
             raise ValueError('Invalid issuer')
 
-        user_id = claims.get('sub')
+        user_id = claims['sub']
 
         return user_id
-
-    except jwt.JWTError as e:
-        logger.error(f"JWT error: {str(e)}", exc_info=True)
-        raise ValueError("Invalid token")
 
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}", exc_info=True)

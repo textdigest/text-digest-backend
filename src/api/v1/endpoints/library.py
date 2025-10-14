@@ -1,145 +1,161 @@
-from fastapi import APIRouter, HTTPException, Request, UploadFile, File
-from dotenv import load_dotenv
-import os
-import boto3
-from jose import jwt
-from services.library.main import upload_to_s3
+from fastapi import APIRouter, HTTPException, Request, Form, File, UploadFile
 from datetime import datetime
+from typing import List
+from uuid import uuid4
+import boto3
+import os
+
+from mypy_boto3_dynamodb.client import DynamoDBClient
+from mypy_boto3_s3.client import S3Client
+
+from services.library.format_ddb_entry import deserialize_ddb_title_item, serialize_title, Title, DdbTitleItem
+from services.library.upload_to_s3 import upload_pdf_to_s3, upload_parsed_pdf_to_s3
+from services.library.pdf_extract import pdf_extract
+
 from util.tokens.verifyIdToken import verify_token
 
+from dotenv import load_dotenv
 load_dotenv()
+
 router = APIRouter()
 
-REGION = os.getenv("REGION")
-POOL_ID = os.getenv("POOL_ID")
-CLIENT_ID = os.getenv("CLIENT_ID")
-USERNAME = os.getenv("USERNAME")
-PASSWORD = os.getenv("PASSWORD")
-BUCKET_NAME = os.getenv("BUCKET_NAME")
-SUB = os.getenv("SUB")
+REGION = os.getenv("REGION") or ''
+POOL_ID = os.getenv("POOL_ID") or ''
+CLIENT_ID = os.getenv("CLIENT_ID") or ''
+USERNAME = os.getenv("USERNAME") or ''
+PASSWORD = os.getenv("PASSWORD") or ''
+BUCKET_NAME = os.getenv("BUCKET_NAME") or ''
+TABLE = os.getenv("DDB_TABLE_NAME") or ''
 
-#Take DynamoDB query result and extract important information
-def format_entry(book_entry):
-    return {
-        "date_downloaded": book_entry["date_downloaded"]["S"],
-        "pdf_link": book_entry["pdf_link"]["S"],
-        "pages": book_entry["num_of_pages"]["N"],
-        "date_published": book_entry["date_published"]["S"],
-        "author": book_entry["author"]["S"],
-        "title": book_entry["title"]["S"],
-        "notes": [
-            {
-                "comment": note["M"]["comment"]["S"],
-                "page_num": int(note["M"]["page_num"]["N"]),
-                "book_title": note["M"]["book_title"]["S"],
-            }
-            for note in book_entry.get("notes", {}).get("L", [])
-        ],
-    }
+s3_client: S3Client = boto3.client("s3", region_name=REGION)
+ddb_client: DynamoDBClient = boto3.client("dynamodb", region_name=REGION)
 
-TABLE = os.getenv("DDB_TABLE_NAME")
-ddb = boto3.client("dynamodb", region_name=REGION)
-
-#Uploads PDF to S3, parse text using OCR  
+# region post-title
 @router.post("/post-title")
-async def post_title(title: str, author: str = "N/A", date_published: str = "", file: UploadFile = File(...), pages=0):
-    s3_client = boto3.client("s3", region_name=REGION)
-    dynamodb = boto3.resource("dynamodb", region_name=REGION)
-    table = dynamodb.Table(TABLE)
-    sub = SUB
-    pk = f"USER#{sub}"
+async def post_title(
+    request: Request, 
+    title: str = Form(...),
+    author: str = Form("Unknown"),
+    date_published: str = Form(""),
+    file: UploadFile = File(...),
+    pages: int = Form(0)
+):
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
     pdf_bytes = await file.read()
-    url_link = upload_to_s3(client=s3_client, pdf_bytes=pdf_bytes, filename=title, bucket=BUCKET_NAME)["s3_uri"]
 
-    item = {
-            "PK": pk,
-            "SK": f"BOOK#{title}",
-            "title": title,
-            "author": author,
-            "date_published": date_published or "unknown",
-            "date_downloaded": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-            "pdf_link": url_link,
-            "num_of_pages": pages,
-            "notes": [],
-        }
+    upload_pdf_s3_res = upload_pdf_to_s3(file_bytes=pdf_bytes, filename=title, path='uploads')
 
-    table.put_item(
+    document_data = pdf_extract(upload_pdf_s3_res["key"])
+
+    title_id = str(uuid4())
+
+    upload_parsed_pdf_s3_res = upload_parsed_pdf_to_s3(dict(document_data), title_id, path='parsed-uploads')
+    
+    title_obj = Title(
+        id=title_id,
+        title=title,
+        author=author,
+        date_published=date_published or "unknown",
+        date_downloaded=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        pages=pages,
+        notes=[]
+    )
+
+    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"], upload_parsed_pdf_s3_res["s3_uri"])
+
+    res = ddb_client.put_item(
         TableName=TABLE,
-        Item=item,
+        Item=serialized_title,
         ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)"
     )
-    
+        
     return {"ok": True}
-    
 
-
-# Returns all titles in library
+# region get-titles-all
 @router.get("/get-titles-all/")
 async def get_titles_all(request: Request):
     auth_header = request.headers.get("authorization")
     sub = verify_token(auth_header)
+
     pk = f"USER#{sub}"
 
-    out = ddb.query(
+    out = ddb_client.query(
         TableName=TABLE,
         KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
-        ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "BOOK#"}},
+        ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "TITLE#"}},
     )
 
-    result = []
+    result: List[Title] = []
     for item in out["Items"]:
-        result.append(format_entry(item))
+        title_obj, ddb_item = deserialize_ddb_title_item(item)
+        result.append(title_obj)
         
     return result
 
-
+# region get-title
 @router.get("/get-title/")
-async def get_title(title_name: str):
-    sub = SUB
+async def get_title(request: Request, title_id: str):
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
     pk = f"USER#{sub}"
-    #Make query to DynamoDB table to search for all books for user
-    out = ddb.query(
-        TableName=TABLE,
-        KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
-        FilterExpression = "title = :title",
-        ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "BOOK#"}, ":title": {"S":title_name }},
+    sk = f"TITLE#{title_id}"
 
-    )
-    return{"book" : format_entry(out["Items"][0])}
-
-@router.delete("/delete-title/")
-async def delete_title(title_name: str):
-    sub = SUB 
-    pk = f"USER#{sub}"
-    #Make query to DynamoDB table to search for all books for user
-    out = ddb.query(
-        TableName=TABLE,
-        KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
-        FilterExpression = "title = :title",
-        ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "BOOK#"}, ":title": {"S":title_name }},
-    )
-
-    # Determine if a match was found
-    if out["Count"] == 0:
-        return {"error": f"No book found with title {title_name}"}
-    
-    book = out["Items"][0]
-    sk = book["SK"]["S"]
-
-    ddb.delete_item(
+    out = ddb_client.get_item(
         TableName=TABLE,
         Key={"PK": {"S": pk}, "SK": {"S": sk}}
     )
-    return {"success": f"Deleted book {title_name}"}
 
-#Append new note to list of notes for a user's book    
+    if "Item" not in out:
+        raise HTTPException(status_code=404, detail=f"Title with id {title_id} not found")
+
+    title, ddb_title_item = deserialize_ddb_title_item(out["Item"])
+    
+    return {"title": title}
+
+# region delete-title
+@router.delete("/delete-title/")
+async def delete_title(id: str, request: Request):
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
+    pk = f"USER#{sub}"
+    sk = f"TITLE#{id}"
+
+    title_item_resp = ddb_client.get_item(
+        TableName=TABLE,
+        Key={"PK": {"S": pk}, "SK": {"S": sk}}
+    )
+
+    if "Item" not in title_item_resp:
+        raise HTTPException(status_code=404, detail=f"Title with id {id} not found")
+
+    title_obj, ddb_title = deserialize_ddb_title_item(title_item_resp["Item"])
+    ddb_client.delete_item(
+        TableName=TABLE,
+        Key={"PK": {"S": pk}, "SK": {"S": sk}}
+    )
+
+    pdf_link = ddb_title.pdf_link
+    s3_key = pdf_link.split('/', 3)[-1]
+    s3_client.delete_object(Bucket=BUCKET_NAME, Key=s3_key)
+
+    return {"success": f"Deleted title {id}"}
+
+# region post-note
 @router.patch("/post-note")
-async def post_note(text: str, page_num: int, book_title: str):
+async def post_note(request: Request, text: str, page_num: int, book_title: str):
     dynamodb = boto3.resource("dynamodb", region_name=REGION)
     table = dynamodb.Table(TABLE)
-    sub = SUB
+
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
     pk = f"USER#{sub}"
-    sk = f"BOOK#{book_title}"
+    sk = f"TITLE#{book_title}"
+
     new_note = {
             "comment": text,
             "page_num": page_num,
@@ -157,29 +173,32 @@ async def post_note(text: str, page_num: int, book_title: str):
             ConditionExpression="attribute_exists(PK) AND attribute_exists(SK)",
             ReturnValues="UPDATED_NEW",
         )
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     
     return {"ok": True, "updated_notes": response["Attributes"]["notes"]}
 
+# region get-notes
 @router.get("/get-notes")
-async def get_notes(book_title:str):
+async def get_notes(request: Request, book_title:str):
     dynamodb = boto3.resource("dynamodb", region_name=REGION)
     table = dynamodb.Table(TABLE)
-    sub = SUB
+
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
     pk = f"USER#{sub}"
-    sk = f"BOOK#{book_title}"
+    sk = f"TITLE#{book_title}"
+
     resp = table.get_item(
         Key={"PK": pk, "SK": sk},
         ProjectionExpression="notes"
     )
 
     if "Item" not in resp:
-        raise HTTPException(status_code=404, detail=f"Book not found: {book_title}")
+        raise HTTPException(status_code=404, detail=f"Title not found: {book_title}")
 
     notes = resp["Item"].get("notes", [])
-    return {"book_title": book_title, "count": len(notes), "notes": notes}
-
-
-
-
+    
+    return {"book_title": book_title, "count": len(notes), "notes": notes} # type: ignore
