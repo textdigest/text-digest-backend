@@ -71,3 +71,70 @@ resource "aws_lambda_permission" "allow_cognito_pre_signup" {
   principal     = "cognito-idp.amazonaws.com"
   source_arn    = aws_cognito_user_pool.this.arn
 }
+
+data "archive_file" "async_pdf_extract_zip" {
+  type        = "zip"
+  source_file = "${path.root}/../src/lambdas/async_pdf_extract/index.py"
+  output_path = "${path.module}/async_pdf_extract.zip"
+}
+
+resource "aws_lambda_function" "async_pdf_extract" {
+  function_name    = "${var.project_name}-${var.environment}-async-pdf-extract"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "index.handler"
+  filename         = data.archive_file.async_pdf_extract_zip.output_path
+  source_code_hash = data.archive_file.async_pdf_extract_zip.output_base64sha256
+}
+
+resource "aws_lambda_event_source_mapping" "async_pdf_extract_from_sqs" {
+  event_source_arn = aws_sqs_queue.async_pdf_extract.arn
+  function_name    = aws_lambda_function.async_pdf_extract.arn
+  batch_size       = 1
+}
+
+# WebSocket lambdas ($connect, $disconnect, $default)
+data "archive_file" "ws_connect_zip" {
+  type        = "zip"
+  source_file = "${path.root}/../src/lambdas/websockets/connect.py"
+  output_path = "${path.module}/ws_connect.zip"
+}
+
+data "archive_file" "ws_disconnect_zip" {
+  type        = "zip"
+  source_file = "${path.root}/../src/lambdas/websockets/disconnect.py"
+  output_path = "${path.module}/ws_disconnect.zip"
+}
+
+data "archive_file" "ws_default_zip" {
+  type        = "zip"
+  source_file = "${path.root}/../src/lambdas/websockets/default.py"
+  output_path = "${path.module}/ws_default.zip"
+}
+
+resource "aws_lambda_function" "ws_connect" {
+  function_name    = "${var.project_name}-${var.environment}-ws-connect"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "connect.handler"
+  filename         = data.archive_file.ws_connect_zip.output_path
+  source_code_hash = data.archive_file.ws_connect_zip.output_base64sha256
+}
+
+resource "aws_lambda_function" "ws_disconnect" {
+  function_name    = "${var.project_name}-${var.environment}-ws-disconnect"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "disconnect.handler"
+  filename         = data.archive_file.ws_disconnect_zip.output_path
+  source_code_hash = data.archive_file.ws_disconnect_zip.output_base64sha256
+}
+
+resource "aws_lambda_function" "ws_default" {
+  function_name    = "${var.project_name}-${var.environment}-ws-default"
+  role             = aws_iam_role.lambda_exec.arn
+  runtime          = "python3.12"
+  handler          = "default.handler"
+  filename         = data.archive_file.ws_default_zip.output_path
+  source_code_hash = data.archive_file.ws_default_zip.output_base64sha256
+}
