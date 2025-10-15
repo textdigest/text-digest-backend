@@ -10,7 +10,7 @@ from mypy_boto3_s3.client import S3Client
 
 from services.library.format_ddb_entry import deserialize_ddb_title_item, serialize_title, Title, DdbTitleItem
 from services.library.upload_to_s3 import upload_pdf_to_s3, upload_parsed_pdf_to_s3
-from services.library.pdf_extract import pdf_extract
+
 
 from util.tokens.verifyIdToken import verify_token
 
@@ -47,23 +47,24 @@ async def post_title(
 
     upload_pdf_s3_res = upload_pdf_to_s3(file_bytes=pdf_bytes, filename=title, path='uploads')
 
-    document_data = pdf_extract(upload_pdf_s3_res["key"])
-
     title_id = str(uuid4())
 
-    upload_parsed_pdf_s3_res = upload_parsed_pdf_to_s3(dict(document_data), title_id, path='parsed-uploads')
-    
     title_obj = Title(
         id=title_id,
+        #
         title=title,
         author=author,
         date_published=date_published or "unknown",
         date_downloaded=datetime.utcnow().isoformat(timespec="seconds") + "Z",
         pages=pages,
+        #
+        is_public=False,
+        is_processing=True,
+        #
         notes=[]
     )
 
-    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"], upload_parsed_pdf_s3_res["s3_uri"])
+    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"])
 
     res = ddb_client.put_item(
         TableName=TABLE,
@@ -81,14 +82,24 @@ async def get_titles_all(request: Request):
 
     pk = f"USER#{sub}"
 
-    out = ddb_client.query(
+    user_titles = ddb_client.query(
         TableName=TABLE,
         KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
         ExpressionAttributeValues={":pk": {"S":pk}, ":sk": {"S": "TITLE#"}},
     )
 
+    public_titles = ddb_client.query(
+        TableName=TABLE,
+        KeyConditionExpression="PK = :pk AND begins_with(SK, :sk)",
+        ExpressionAttributeValues={":pk": {"S":"PUBLIC"}, ":sk": {"S": "TITLE#"}},
+    )
+
     result: List[Title] = []
-    for item in out["Items"]:
+    for item in user_titles["Items"]:
+        title_obj, ddb_item = deserialize_ddb_title_item(item)
+        result.append(title_obj)
+    
+    for item in public_titles["Items"]:
         title_obj, ddb_item = deserialize_ddb_title_item(item)
         result.append(title_obj)
         
@@ -96,11 +107,11 @@ async def get_titles_all(request: Request):
 
 # region get-title
 @router.get("/get-title/")
-async def get_title(request: Request, title_id: str):
+async def get_title(request: Request, title_id: str, is_public: bool):
     auth_header = request.headers.get("authorization")
     sub = verify_token(auth_header)
 
-    pk = f"USER#{sub}"
+    pk = "PUBLIC" if is_public else f"USER#{sub}"
     sk = f"TITLE#{title_id}"
 
     out = ddb_client.get_item(
