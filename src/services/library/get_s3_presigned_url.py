@@ -10,8 +10,11 @@ BUCKET_NAME = os.getenv("BUCKET_NAME")
 
 s3_client: S3Client = boto3.client("s3", region_name=REGION)
 
-def get_s3_presigned_url(s3_key: str, expiration: int = 3600) -> str:
+def get_s3_presigned_url(s3_key: str | None, expiration: int = 3600) -> str | None:
     """For s3 GET requests"""
+    if not s3_key:
+        return None
+
     url = s3_client.generate_presigned_url(
         'get_object',
         Params={

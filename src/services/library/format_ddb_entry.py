@@ -12,7 +12,7 @@ class DdbTitleItem(BaseModel):
     '''
     Raw ddb title item post-deserialization.
     '''
-    PK: str = Field(pattern=r'^USER#')
+    PK: str = Field(pattern=r'^(USER#|PUBLIC)')
     SK: str = Field(pattern=r'^TITLE#')
 
     title: str
@@ -21,15 +21,19 @@ class DdbTitleItem(BaseModel):
     date_downloaded: str
     num_of_pages: int
 
-    pdf_link: str # Uri
-    parsed_pdf_link: str # Uri
+    is_public: bool = False
+    is_processing: bool = True 
+
+    # 'Link' == S3 Uri
+    pdf_link: str 
+    parsed_pdf_link: str | None # DNE until is_processing=False | See @/lambdas/async_pdf_extract/index.py
 
     notes: list
     last_viewed: Optional[str] = None
 
 class Title(BaseModel):
     '''
-    Title object for API responses.
+    Title object ready for API responses.
     '''
     id: str
     title: str
@@ -37,6 +41,9 @@ class Title(BaseModel):
     pages: int
     date_published: str
     date_downloaded: str
+
+    is_public: bool
+    is_processing: bool
 
     # Dne until get_s3_presigned is called.
     pdf_presigned_url: str | None = None
@@ -52,13 +59,15 @@ def deserialize_ddb_title_item(ddb_book_item: dict[str, AttributeValueTypeDef]) 
     ddb_title_item = DdbTitleItem(**item)
     
     pdf_s3_key = ddb_title_item.pdf_link.split('/', 3)[-1]
-    parsed_pdf_s3_key = ddb_title_item.parsed_pdf_link.split('/', 3)[-1]
+    parsed_pdf_s3_key = (lambda x: x.split('/', 3)[-1] if x is not None else None)(ddb_title_item.parsed_pdf_link)
 
     
     title = Title(
         id=ddb_title_item.SK.partition("#")[2],
         title=ddb_title_item.title,
         author=ddb_title_item.author,
+        is_public=ddb_title_item.is_public,
+        is_processing=ddb_title_item.is_processing,
 
         date_published=ddb_title_item.date_published,
         date_downloaded=ddb_title_item.date_downloaded,
@@ -72,15 +81,16 @@ def deserialize_ddb_title_item(ddb_book_item: dict[str, AttributeValueTypeDef]) 
 
     return title, ddb_title_item
 
-def serialize_title(title: Title, sub: str, pdf_s3_uri: str, parsed_pdf_s3_uri: str ) -> dict[str, AttributeValueTypeDef]:
+def serialize_title(title: Title, sub: str, pdf_s3_uri: str, parsed_pdf_s3_uri: Optional[str] = None) -> dict[str, AttributeValueTypeDef]:
     book_item = DdbTitleItem(
-        PK=f"USER#{sub}",
+        PK="PUBLIC" if title.is_public else f"USER#{sub}",
         SK=f"TITLE#{title.id}",
 
         title=title.title,
         author=title.author,
         date_published=title.date_published,
         date_downloaded=title.date_downloaded,
+        is_public=title.is_public,
 
         pdf_link=pdf_s3_uri,
         parsed_pdf_link=parsed_pdf_s3_uri,

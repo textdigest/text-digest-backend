@@ -42,8 +42,6 @@ def upload_parsed_pdf_to_s3(data: dict, title_id: str, path: str | None = None) 
             ContentType="application/json"
         )
         
-        print(f"[UPLOAD_DOCUMENT_DATA] Uploaded {len(json_bytes)} bytes to {key}")
-        
         return {"key": key, "s3_uri": f"s3://{BUCKET_NAME}/{key}"}
     
     except Exception as e:
