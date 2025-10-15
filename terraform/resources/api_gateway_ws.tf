@@ -13,25 +13,28 @@ resource "aws_apigatewayv2_stage" "ws_stage" {
 resource "aws_apigatewayv2_integration" "ws_connect_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_connect.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_connect.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_integration" "ws_disconnect_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_disconnect.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_disconnect.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_integration" "ws_default_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_default.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_default.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_route" "ws_connect_route" {
