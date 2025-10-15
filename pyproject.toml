@@ -13,6 +13,7 @@ dependencies = [
     "mangum",
     "uvicorn",
     "pydantic",
+    "aws_lambda_typing",
     "boto",
     "python-dotenv",
     "boto3",
