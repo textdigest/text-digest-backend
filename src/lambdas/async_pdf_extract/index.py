@@ -1,4 +1,3 @@
-from aws_lambda_typing import context as events
 from mypy_boto3_dynamodb.client import DynamoDBClient
 from typing import TypedDict
 
@@ -28,7 +27,7 @@ class AsyncPdfExtractQueueMessage(TypedDict):
     s3_uri: str
     title_id: str
 
-def handler(event: events.SQSEvent, context) -> None:
+def handler(event, context) -> None:
     record = event['Records'][0]
 
     body = record.get('body')
