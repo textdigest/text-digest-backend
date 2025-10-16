@@ -1,4 +1,4 @@
-from aws_lambda_typing import context as lambda_context, events
+from aws_lambda_typing import context as events
 from mypy_boto3_dynamodb.client import DynamoDBClient
 from typing import TypedDict
 
@@ -28,7 +28,7 @@ class AsyncPdfExtractQueueMessage(TypedDict):
     s3_uri: str
     title_id: str
 
-def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> None:
+def handler(event: events.SQSEvent, context) -> None:
     record = event['Records'][0]
 
     body = record.get('body')
@@ -36,6 +36,9 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
         raise KeyError('body')
 
     queue_data: AsyncPdfExtractQueueMessage = json.loads(body)
+
+    logger.info("Queue: ", queue_data)
+
     ws = WebSocketStream('library', queue_data['user_id'])
 
     try:
