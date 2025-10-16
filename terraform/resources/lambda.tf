@@ -60,10 +60,6 @@ resource "aws_lambda_function" "cognito_pre_signup_auto_confirm" {
   handler          = "index.handler"
   filename         = data.archive_file.pre_signup_zip.output_path
   source_code_hash = data.archive_file.pre_signup_zip.output_base64sha256
-
-  environment {
-    variables = local.dotenv
-  }
 }
 
 resource "aws_lambda_permission" "allow_cognito_pre_signup" {
