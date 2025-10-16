@@ -1,3 +1,27 @@
+resource "aws_iam_role" "api_gateway_cloudwatch" {
+  name = "${var.project_name}-${var.environment}-apigw-cloudwatch"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "apigateway.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
+  role       = aws_iam_role.api_gateway_cloudwatch.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+}
+
+resource "aws_api_gateway_account" "this" {
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+}
+
 resource "aws_apigatewayv2_api" "ws_api" {
   name                       = "${var.project_name}-ws-api-${var.environment}"
   protocol_type              = "WEBSOCKET"
@@ -8,30 +32,59 @@ resource "aws_apigatewayv2_stage" "ws_stage" {
   api_id      = aws_apigatewayv2_api.ws_api.id
   name        = "$default"
   auto_deploy = true
+
+  default_route_settings {
+    logging_level            = "INFO"
+    data_trace_enabled       = true
+    detailed_metrics_enabled = true
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.ws_api.arn
+    format = jsonencode({
+      requestId               = "$context.requestId"
+      ip                      = "$context.identity.sourceIp"
+      requestTime             = "$context.requestTime"
+      routeKey                = "$context.routeKey"
+      status                  = "$context.status"
+      protocol                = "$context.protocol"
+      responseLength          = "$context.responseLength"
+      errorMessage            = "$context.error.message"
+      integrationErrorMessage = "$context.integrationErrorMessage"
+    })
+  }
+
+  depends_on = [
+    aws_cloudwatch_log_group.ws_api,
+    aws_api_gateway_account.this
+  ]
 }
 
 resource "aws_apigatewayv2_integration" "ws_connect_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_connect.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_connect.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_integration" "ws_disconnect_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_disconnect.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_disconnect.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_integration" "ws_default_integration" {
   api_id                 = aws_apigatewayv2_api.ws_api.id
   integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.ws_default.invoke_arn
   integration_method     = "POST"
-  payload_format_version = "2.0"
+  passthrough_behavior   = "WHEN_NO_MATCH"
+  integration_uri        = "arn:aws:apigateway:${var.aws_region}:lambda:path/2015-03-31/functions/${aws_lambda_function.ws_default.arn}/invocations"
+  payload_format_version = "1.0"
 }
 
 resource "aws_apigatewayv2_route" "ws_connect_route" {

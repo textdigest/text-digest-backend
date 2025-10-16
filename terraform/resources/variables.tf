@@ -37,3 +37,8 @@ variable "google_client_secret" {
   type      = string
   sensitive = true
 }
+
+variable "modal_process" {
+  type      = string
+  sensitive = true
+}

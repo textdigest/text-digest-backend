@@ -1,7 +1,6 @@
 import json
 import boto3
 import os
-import asyncio
 
 from typing import Dict, Any, Optional
 import time
@@ -9,17 +8,18 @@ import time
 from mypy_boto3_dynamodb.client import DynamoDBClient
 from boto3.dynamodb.conditions import Key, Attr
 
-
 from dotenv import load_dotenv
 load_dotenv()
 
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 REGION = os.getenv("REGION") or ''
 WEBSOCKET_API_GATEWAY: str = os.getenv("WEBSOCKET_API_GATEWAY") or ''
 DDB_TABLE_NAME = os.getenv("DDB_TABLE_NAME") or ''
 
 ddb_client: DynamoDBClient = boto3.client("dynamodb", region_name=REGION)
-
 
 class WebSocketStream:
     def __init__(self,  service_name: str, user_id: str):
@@ -28,6 +28,9 @@ class WebSocketStream:
         self.service_name = service_name
 
         endpoint_url = WEBSOCKET_API_GATEWAY.replace("wss://", "https://")
+
+        logger.info(f"WebSocket endpoint URL: {endpoint_url}")
+        logger.info(f"Connection ID: {self.connection_id}")
 
         self.apigw_client = boto3.client('apigatewaymanagementapi',
             endpoint_url=endpoint_url

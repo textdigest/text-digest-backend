@@ -26,9 +26,7 @@ resource "aws_lambda_function" "api" {
   memory_size = var.lambda_memory_size
 
   environment {
-    variables = {
-      ENVIRONMENT = var.environment
-    }
+    variables = merge(local.dotenv, { ENVIRONMENT = var.environment })
   }
 
   depends_on = [aws_iam_role_policy_attachment.lambda_admin]
@@ -72,19 +70,22 @@ resource "aws_lambda_permission" "allow_cognito_pre_signup" {
   source_arn    = aws_cognito_user_pool.this.arn
 }
 
-data "archive_file" "async_pdf_extract_zip" {
-  type        = "zip"
-  source_file = "${path.root}/../src/lambdas/async_pdf_extract/index.py"
-  output_path = "${path.module}/async_pdf_extract.zip"
-}
-
 resource "aws_lambda_function" "async_pdf_extract" {
-  function_name    = "${var.project_name}-${var.environment}-async-pdf-extract"
-  role             = aws_iam_role.lambda_exec.arn
-  runtime          = "python3.12"
-  handler          = "index.handler"
-  filename         = data.archive_file.async_pdf_extract_zip.output_path
-  source_code_hash = data.archive_file.async_pdf_extract_zip.output_base64sha256
+  function_name = "${var.project_name}-${var.environment}-async-pdf-extract"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = 900
+  memory_size = 1024
+
+  image_config {
+    command = ["lambdas.async_pdf_extract.index.handler"]
+  }
+
+  environment {
+    variables = local.dotenv
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "async_pdf_extract_from_sqs" {
@@ -93,48 +94,62 @@ resource "aws_lambda_event_source_mapping" "async_pdf_extract_from_sqs" {
   batch_size       = 1
 }
 
-# WebSocket lambdas ($connect, $disconnect, $default)
-data "archive_file" "ws_connect_zip" {
-  type        = "zip"
-  source_file = "${path.root}/../src/lambdas/websockets/connect.py"
-  output_path = "${path.module}/ws_connect.zip"
-}
-
-data "archive_file" "ws_disconnect_zip" {
-  type        = "zip"
-  source_file = "${path.root}/../src/lambdas/websockets/disconnect.py"
-  output_path = "${path.module}/ws_disconnect.zip"
-}
-
-data "archive_file" "ws_default_zip" {
-  type        = "zip"
-  source_file = "${path.root}/../src/lambdas/websockets/default.py"
-  output_path = "${path.module}/ws_default.zip"
-}
-
 resource "aws_lambda_function" "ws_connect" {
-  function_name    = "${var.project_name}-${var.environment}-ws-connect"
-  role             = aws_iam_role.lambda_exec.arn
-  runtime          = "python3.12"
-  handler          = "connect.handler"
-  filename         = data.archive_file.ws_connect_zip.output_path
-  source_code_hash = data.archive_file.ws_connect_zip.output_base64sha256
+  function_name = "${var.project_name}-${var.environment}-ws-connect"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  image_config {
+    command = ["lambdas.websockets.connect.handler"]
+  }
+
+  environment {
+    variables = local.dotenv
+  }
+
+  depends_on = [aws_cloudwatch_log_group.ws_connect_lambda]
 }
 
 resource "aws_lambda_function" "ws_disconnect" {
-  function_name    = "${var.project_name}-${var.environment}-ws-disconnect"
-  role             = aws_iam_role.lambda_exec.arn
-  runtime          = "python3.12"
-  handler          = "disconnect.handler"
-  filename         = data.archive_file.ws_disconnect_zip.output_path
-  source_code_hash = data.archive_file.ws_disconnect_zip.output_base64sha256
+  function_name = "${var.project_name}-${var.environment}-ws-disconnect"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  image_config {
+    command = ["lambdas.websockets.disconnect.handler"]
+  }
+
+  environment {
+    variables = local.dotenv
+  }
+
+  depends_on = [aws_cloudwatch_log_group.ws_disconnect_lambda]
 }
 
 resource "aws_lambda_function" "ws_default" {
-  function_name    = "${var.project_name}-${var.environment}-ws-default"
-  role             = aws_iam_role.lambda_exec.arn
-  runtime          = "python3.12"
-  handler          = "default.handler"
-  filename         = data.archive_file.ws_default_zip.output_path
-  source_code_hash = data.archive_file.ws_default_zip.output_base64sha256
+  function_name = "${var.project_name}-${var.environment}-ws-default"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  image_config {
+    command = ["lambdas.websockets.default.handler"]
+  }
+
+  environment {
+    variables = local.dotenv
+  }
+
+  depends_on = [aws_cloudwatch_log_group.ws_default_lambda]
 }

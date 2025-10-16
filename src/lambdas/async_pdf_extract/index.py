@@ -1,4 +1,3 @@
-from aws_lambda_typing import context as lambda_context, events
 from mypy_boto3_dynamodb.client import DynamoDBClient
 from typing import TypedDict
 
@@ -11,20 +10,24 @@ from services.library.upload_to_s3 import upload_parsed_pdf_to_s3
 from services.library.pdf_extract import mineru_pdf_extract
 from services.websocket.streamer import WebSocketStream
 
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 from dotenv import load_dotenv
 load_dotenv()
 
-REGION = os.getenv("REGION") or ''
-DDB_TABLE_NAME = os.getenv("TABLE") or ''
+REGION = os.environ.get("REGION", '')
+DDB_TABLE_NAME = os.environ.get("DDB_TABLE_NAME", '')
 
 ddb_client: DynamoDBClient = boto3.client("dynamodb", region_name=REGION)
 
 class AsyncPdfExtractQueueMessage(TypedDict):
     user_id: str
-    s3_key: str
+    s3_uri: str
     title_id: str
 
-def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> None:
+def handler(event, context) -> None:
     record = event['Records'][0]
 
     body = record.get('body')
@@ -32,11 +35,17 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
         raise KeyError('body')
 
     queue_data: AsyncPdfExtractQueueMessage = json.loads(body)
+
+    logger.info("Queue: ", queue_data)
+
     ws = WebSocketStream('library', queue_data['user_id'])
 
     try:
+        logger.info(f"Attempting to run inference on title: {queue_data['title_id']}")
+
         # MinerU Inference
-        document_data = mineru_pdf_extract(queue_data['s3_key'])
+        s3_key =  queue_data["s3_uri"].split('/', 3)[-1]
+        document_data = mineru_pdf_extract(s3_key)
         upload_parsed_pdf_s3_res = upload_parsed_pdf_to_s3(dict(document_data), queue_data['title_id'], path='parsed-uploads')
 
         # Update DDB Entry on Completion
@@ -52,7 +61,7 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
                 ":parsed_pdf_link": {"S": upload_parsed_pdf_s3_res['s3_uri']},
             }
         )
-        
+
         # WS Notify Front-end
         asyncio.run(ws.send_chunk(queue_data['title_id'], 'PROCESSING_COMPLETE'))
     except Exception as e:

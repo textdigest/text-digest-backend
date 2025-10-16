@@ -22,4 +22,5 @@ module "resources" {
 
   google_client_id     = var.google_client_id
   google_client_secret = var.google_client_secret
+  modal_process        = var.modal_process
 }
