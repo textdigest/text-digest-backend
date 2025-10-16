@@ -80,7 +80,7 @@ resource "aws_lambda_function" "async_pdf_extract" {
   memory_size = var.lambda_memory_size
 
   image_config {
-    command = ["src.lambdas.async_pdf_extract.index.handler"]
+    command = ["lambdas.async_pdf_extract.index.handler"]
   }
 
   environment {
@@ -104,7 +104,7 @@ resource "aws_lambda_function" "ws_connect" {
   memory_size = var.lambda_memory_size
 
   image_config {
-    command = ["src.lambdas.websockets.connect.handler"]
+    command = ["lambdas.websockets.connect.handler"]
   }
 
   environment {
@@ -124,7 +124,7 @@ resource "aws_lambda_function" "ws_disconnect" {
   memory_size = var.lambda_memory_size
 
   image_config {
-    command = ["src.lambdas.websockets.disconnect.handler"]
+    command = ["lambdas.websockets.disconnect.handler"]
   }
 
   environment {
@@ -144,7 +144,7 @@ resource "aws_lambda_function" "ws_default" {
   memory_size = var.lambda_memory_size
 
   image_config {
-    command = ["src.lambdas.websockets.default.handler"]
+    command = ["lambdas.websockets.default.handler"]
   }
 
   environment {

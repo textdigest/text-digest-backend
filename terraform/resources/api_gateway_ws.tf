@@ -33,6 +33,12 @@ resource "aws_apigatewayv2_stage" "ws_stage" {
   name        = "$default"
   auto_deploy = true
 
+  default_route_settings {
+    logging_level            = "INFO"
+    data_trace_enabled       = true
+    detailed_metrics_enabled = true
+  }
+
   access_log_settings {
     destination_arn = aws_cloudwatch_log_group.ws_api.arn
     format = jsonencode({
