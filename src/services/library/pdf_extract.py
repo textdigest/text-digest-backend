@@ -9,9 +9,9 @@ from services.library.get_s3_presigned_url import get_s3_presigned_url
 from dotenv import load_dotenv
 load_dotenv()
 
-REGION = os.getenv("REGION")
+REGION = os.getenv("REGION") or ''
 BUCKET_NAME = os.getenv("BUCKET_NAME") or ''
-MODAL_PROCESS = os.getenv("MODAL_PROCESS")
+MODAL_PROCESS = os.getenv("MODAL_PROCESS") or ''
 
 s3_client: S3Client = boto3.client("s3", region_name=REGION)
 
