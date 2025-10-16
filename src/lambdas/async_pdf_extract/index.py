@@ -11,11 +11,15 @@ from services.library.upload_to_s3 import upload_parsed_pdf_to_s3
 from services.library.pdf_extract import mineru_pdf_extract
 from services.websocket.streamer import WebSocketStream
 
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
 from dotenv import load_dotenv
 load_dotenv()
 
-REGION = os.getenv("REGION") or ''
-DDB_TABLE_NAME = os.getenv("TABLE") or ''
+REGION = os.environ.get("REGION", '')
+DDB_TABLE_NAME = os.environ.get("DDB_TABLE_NAME", '')
 
 ddb_client: DynamoDBClient = boto3.client("dynamodb", region_name=REGION)
 
@@ -35,6 +39,8 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
     ws = WebSocketStream('library', queue_data['user_id'])
 
     try:
+        logger.info(f"Attempting to run inference on title: {queue_data['title_id']}")
+
         # MinerU Inference
         s3_key =  queue_data["s3_uri"].split('/', 3)[-1]
         document_data = mineru_pdf_extract(s3_key)
