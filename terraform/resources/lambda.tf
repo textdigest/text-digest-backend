@@ -70,19 +70,18 @@ resource "aws_lambda_permission" "allow_cognito_pre_signup" {
   source_arn    = aws_cognito_user_pool.this.arn
 }
 
-data "archive_file" "async_pdf_extract_zip" {
-  type        = "zip"
-  source_file = "${path.root}/../src/lambdas/async_pdf_extract/index.py"
-  output_path = "${path.module}/async_pdf_extract.zip"
-}
-
 resource "aws_lambda_function" "async_pdf_extract" {
-  function_name    = "${var.project_name}-${var.environment}-async-pdf-extract"
-  role             = aws_iam_role.lambda_exec.arn
-  runtime          = "python3.12"
-  handler          = "index.handler"
-  filename         = data.archive_file.async_pdf_extract_zip.output_path
-  source_code_hash = data.archive_file.async_pdf_extract_zip.output_base64sha256
+  function_name = "${var.project_name}-${var.environment}-async-pdf-extract"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  image_config {
+    command = ["src.lambdas.async_pdf_extract.index.handler"]
+  }
 
   environment {
     variables = local.dotenv
