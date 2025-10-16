@@ -63,20 +63,22 @@ async def post_title(
         notes=[]
     )
 
-    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"])
-    ddb_client.put_item(
-        TableName=DDB_TABLE_NAME,
-        Item=serialized_title,
-        ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)"
-    )
-
     sqs_client.send_message(
         QueueUrl=ASYNC_PDF_EXTRACT_QUEUE_URL,
         MessageBody=json.dumps({
             "user_id": sub,
             "s3_uri": upload_pdf_s3_res["s3_uri"],
             "title_id": title_id
-        })
+        }),
+        MessageGroupId=sub,
+        MessageDeduplicationId=title_id
+    )
+
+    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"])
+    ddb_client.put_item(
+        TableName=DDB_TABLE_NAME,
+        Item=serialized_title,
+        ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)"
     )
         
     return {"ok": True}
