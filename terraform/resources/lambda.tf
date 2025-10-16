@@ -76,8 +76,8 @@ resource "aws_lambda_function" "async_pdf_extract" {
   image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
   role          = aws_iam_role.lambda_exec.arn
 
-  timeout     = var.lambda_timeout
-  memory_size = var.lambda_memory_size
+  timeout     = 900
+  memory_size = 1024
 
   image_config {
     command = ["lambdas.async_pdf_extract.index.handler"]
