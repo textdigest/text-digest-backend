@@ -63,5 +63,5 @@ jobs:
                     -var "environment=${ENVIRONMENT}" \
                     -var "image_tag=${IMAGE_TAG}" \
                     -var "google_client_id=${{ secrets.TF_VAR_GOOGLE_CLIENT_ID }}" \
-                    -var "google_client_secret=${{ secrets.TF_VAR_GOOGLE_CLIENT_SECRET }}"
+                    -var "google_client_secret=${{ secrets.TF_VAR_GOOGLE_CLIENT_SECRET }}" \
                     -var "modal_process=${{ secrets.TF_VAR_MODAL_PROCESS }}"
