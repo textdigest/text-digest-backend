@@ -26,9 +26,7 @@ resource "aws_lambda_function" "api" {
   memory_size = var.lambda_memory_size
 
   environment {
-    variables = {
-      ENVIRONMENT = var.environment
-    }
+    variables = merge(local.dotenv, { ENVIRONMENT = var.environment })
   }
 
   depends_on = [aws_iam_role_policy_attachment.lambda_admin]
@@ -62,6 +60,10 @@ resource "aws_lambda_function" "cognito_pre_signup_auto_confirm" {
   handler          = "index.handler"
   filename         = data.archive_file.pre_signup_zip.output_path
   source_code_hash = data.archive_file.pre_signup_zip.output_base64sha256
+
+  environment {
+    variables = local.dotenv
+  }
 }
 
 resource "aws_lambda_permission" "allow_cognito_pre_signup" {
@@ -85,6 +87,10 @@ resource "aws_lambda_function" "async_pdf_extract" {
   handler          = "index.handler"
   filename         = data.archive_file.async_pdf_extract_zip.output_path
   source_code_hash = data.archive_file.async_pdf_extract_zip.output_base64sha256
+
+  environment {
+    variables = local.dotenv
+  }
 }
 
 resource "aws_lambda_event_source_mapping" "async_pdf_extract_from_sqs" {
@@ -119,6 +125,10 @@ resource "aws_lambda_function" "ws_connect" {
   handler          = "connect.handler"
   filename         = data.archive_file.ws_connect_zip.output_path
   source_code_hash = data.archive_file.ws_connect_zip.output_base64sha256
+
+  environment {
+    variables = local.dotenv
+  }
 }
 
 resource "aws_lambda_function" "ws_disconnect" {
@@ -128,6 +138,10 @@ resource "aws_lambda_function" "ws_disconnect" {
   handler          = "disconnect.handler"
   filename         = data.archive_file.ws_disconnect_zip.output_path
   source_code_hash = data.archive_file.ws_disconnect_zip.output_base64sha256
+
+  environment {
+    variables = local.dotenv
+  }
 }
 
 resource "aws_lambda_function" "ws_default" {
@@ -137,4 +151,8 @@ resource "aws_lambda_function" "ws_default" {
   handler          = "default.handler"
   filename         = data.archive_file.ws_default_zip.output_path
   source_code_hash = data.archive_file.ws_default_zip.output_base64sha256
+
+  environment {
+    variables = local.dotenv
+  }
 }

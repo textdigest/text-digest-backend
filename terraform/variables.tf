@@ -38,3 +38,9 @@ variable "google_client_secret" {
   type        = string
   sensitive   = true
 }
+
+variable "modal_process" {
+  description = "modal.com gpu runtime for inference"
+  type        = string
+  sensitive   = true
+}

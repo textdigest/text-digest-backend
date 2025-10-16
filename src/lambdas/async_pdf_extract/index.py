@@ -21,7 +21,7 @@ ddb_client: DynamoDBClient = boto3.client("dynamodb", region_name=REGION)
 
 class AsyncPdfExtractQueueMessage(TypedDict):
     user_id: str
-    s3_key: str
+    s3_uri: str
     title_id: str
 
 def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> None:
@@ -36,7 +36,8 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
 
     try:
         # MinerU Inference
-        document_data = mineru_pdf_extract(queue_data['s3_key'])
+        s3_key =  queue_data["s3_uri"].split('/', 3)[-1]
+        document_data = mineru_pdf_extract(s3_key)
         upload_parsed_pdf_s3_res = upload_parsed_pdf_to_s3(dict(document_data), queue_data['title_id'], path='parsed-uploads')
 
         # Update DDB Entry on Completion
@@ -52,7 +53,7 @@ def handler(event: events.SQSEvent, context: lambda_context.LambdaContext) -> No
                 ":parsed_pdf_link": {"S": upload_parsed_pdf_s3_res['s3_uri']},
             }
         )
-        
+
         # WS Notify Front-end
         asyncio.run(ws.send_chunk(queue_data['title_id'], 'PROCESSING_COMPLETE'))
     except Exception as e:
