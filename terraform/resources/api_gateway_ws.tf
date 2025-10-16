@@ -8,6 +8,23 @@ resource "aws_apigatewayv2_stage" "ws_stage" {
   api_id      = aws_apigatewayv2_api.ws_api.id
   name        = "$default"
   auto_deploy = true
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.ws_api.arn
+    format = jsonencode({
+      requestId               = "$context.requestId"
+      ip                      = "$context.identity.sourceIp"
+      requestTime             = "$context.requestTime"
+      routeKey                = "$context.routeKey"
+      status                  = "$context.status"
+      protocol                = "$context.protocol"
+      responseLength          = "$context.responseLength"
+      errorMessage            = "$context.error.message"
+      integrationErrorMessage = "$context.integrationErrorMessage"
+    })
+  }
+
+  depends_on = [aws_cloudwatch_log_group.ws_api]
 }
 
 resource "aws_apigatewayv2_integration" "ws_connect_integration" {
