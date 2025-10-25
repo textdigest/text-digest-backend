@@ -9,6 +9,7 @@ import asyncio
 from services.library.upload_to_s3 import upload_parsed_pdf_to_s3
 from services.library.pdf_extract import mineru_pdf_extract
 from services.websocket.streamer import WebSocketStream
+from services.rag.document_embedder import DocumentEmbedder
 
 import logging
 logger = logging.getLogger()
@@ -48,6 +49,22 @@ def handler(event, context) -> None:
         document_data = mineru_pdf_extract(s3_key)
         upload_parsed_pdf_s3_res = upload_parsed_pdf_to_s3(dict(document_data), queue_data['title_id'], path='parsed-uploads')
 
+        # Embed the processed content for search
+        logger.info(f"Embedding document content for title: {queue_data['title_id']}")
+        embedder = DocumentEmbedder()
+        embed_result = embedder.embed_document(
+            document_text=document_data.get("markdown", ""),
+            doc_id=queue_data['title_id'],
+            metadata={
+                "user_id": queue_data['user_id'],
+                "title_id": queue_data['title_id'],
+                "source": "pdf_upload",
+                "processed_at": asyncio.get_event_loop().time()
+            }
+        )
+        
+        logger.info(f"Embedding result: {embed_result}")
+
         # Update DDB Entry on Completion
         ddb_client.update_item(
             TableName=DDB_TABLE_NAME,
@@ -65,5 +82,6 @@ def handler(event, context) -> None:
         # WS Notify Front-end
         asyncio.run(ws.send_chunk(queue_data['title_id'], 'PROCESSING_COMPLETE'))
     except Exception as e:
+        logger.error(f"Processing failed for title {queue_data['title_id']}: {e}")
         asyncio.run(ws.send_chunk(queue_data['title_id'], 'PROCESSING_FAILED'))
     
