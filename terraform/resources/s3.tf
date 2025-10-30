@@ -7,7 +7,7 @@ resource "aws_s3_bucket_cors_configuration" "this" {
 
   cors_rule {
     allowed_origins = ["http://localhost:3000", "https://app.textdigest.ai", "https://staging.textdigest.ai"]
-    allowed_methods = ["GET", "HEAD"]
+    allowed_methods = ["GET", "HEAD", "PUT"]
     allowed_headers = ["*"]
     max_age_seconds = 3000
   }
