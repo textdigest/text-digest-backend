@@ -66,12 +66,16 @@ resource "aws_cognito_user_pool_client" "this" {
 
   callback_urls = [
     "http://localhost:3000/library",
-    "https://textdigest.ai/library"
+    "https://textdigest.ai/library",
+    "https://app.textdigest.ai/library",
+    "https://staging.textdigest.ai/library"
   ]
 
   logout_urls = [
     "http://localhost:3000/",
-    "https://textdigest.ai/"
+    "https://textdigest.ai/",
+    "https://app.textdigest.ai/",
+    "https://staging.textdigest.ai/"
   ]
 
   supported_identity_providers = ["COGNITO", "Google"]
