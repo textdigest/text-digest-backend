@@ -26,6 +26,19 @@ def upload_pdf_to_s3(file_bytes: bytes, filename: str, path: str | None = None) 
     except Exception as e:
         raise Exception(f"Failed to upload_to_s3: {e}")
 
+def get_presigned_put_url(s3_key: str, expiration: int = 3600) -> str:
+    """Generate presigned PUT URL for direct S3 upload"""
+    url = s3_client.generate_presigned_url(
+        'put_object',
+        Params={
+            'Bucket': BUCKET_NAME,
+            'Key': s3_key,
+            'ContentType': 'application/pdf'
+        },
+        ExpiresIn=expiration
+    )
+    return url
+
 class UploadDocumentDataResult(TypedDict):
     key: str
     s3_uri: str

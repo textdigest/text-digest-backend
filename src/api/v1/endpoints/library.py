@@ -11,7 +11,7 @@ import os
 import json
 
 from services.library.format_ddb_entry import deserialize_ddb_title_item, serialize_title, Title, DdbTitleItem
-from services.library.upload_to_s3 import upload_pdf_to_s3, upload_parsed_pdf_to_s3
+from services.library.upload_to_s3 import get_presigned_put_url
 
 from util.tokens.verifyIdToken import verify_token
 
@@ -38,50 +38,79 @@ async def post_title(
     title: str = Form(...),
     author: str = Form("Unknown"),
     date_published: str = Form(""),
-    file: UploadFile = File(...),
     pages: int = Form(0)
 ):
     auth_header = request.headers.get("authorization")
     sub = verify_token(auth_header)
 
-    pdf_bytes = await file.read()
-    upload_pdf_s3_res = upload_pdf_to_s3(file_bytes=pdf_bytes, filename=title, path='uploads')
-
     title_id = str(uuid4())
+    base_name = title.replace('.pdf', '')
+    s3_key = f'uploads/{base_name}-{title_id}.pdf'
+    s3_uri = f"s3://{BUCKET_NAME}/{s3_key}"
+    
+    presigned_url = get_presigned_put_url(s3_key)
+
     title_obj = Title(
         id=title_id,
-        #
         title=title,
         author=author,
         date_published=date_published or "unknown",
         date_downloaded=datetime.utcnow().isoformat(timespec="seconds") + "Z",
         pages=pages,
-        #
         is_public=False,
         is_processing=True,
-        #
         notes=[]
     )
 
-    sqs_client.send_message(
-        QueueUrl=ASYNC_PDF_EXTRACT_QUEUE_URL,
-        MessageBody=json.dumps({
-            "user_id": sub,
-            "s3_uri": upload_pdf_s3_res["s3_uri"],
-            "title_id": title_id
-        }),
-        MessageGroupId=sub,
-        MessageDeduplicationId=title_id
-    )
-
-    serialized_title = serialize_title(title_obj, sub, upload_pdf_s3_res["s3_uri"])
+    serialized_title = serialize_title(title_obj, sub, s3_uri)
     ddb_client.put_item(
         TableName=DDB_TABLE_NAME,
         Item=serialized_title,
         ConditionExpression="attribute_not_exists(PK) AND attribute_not_exists(SK)"
     )
         
-    return {"ok": True}
+    return {
+        "ok": True,
+        "title_id": title_id,
+        "presigned_url": presigned_url,
+        "s3_key": s3_key
+    }
+
+# region confirm-title-upload
+@router.post("/confirm-title-upload")
+async def confirm_title_upload(
+    request: Request,
+    title_id: str = Form(...)
+):
+    auth_header = request.headers.get("authorization")
+    sub = verify_token(auth_header)
+
+    pk = f"USER#{sub}"
+    sk = f"TITLE#{title_id}"
+
+    title_item_resp = ddb_client.get_item(
+        TableName=DDB_TABLE_NAME,
+        Key={"PK": {"S": pk}, "SK": {"S": sk}}
+    )
+
+    if "Item" not in title_item_resp:
+        raise HTTPException(status_code=404, detail=f"Title with id {title_id} not found")
+
+    title_obj, ddb_title = deserialize_ddb_title_item(title_item_resp["Item"])
+    s3_uri = ddb_title.pdf_link
+
+    sqs_client.send_message(
+        QueueUrl=ASYNC_PDF_EXTRACT_QUEUE_URL,
+        MessageBody=json.dumps({
+            "user_id": sub,
+            "s3_uri": s3_uri,
+            "title_id": title_id
+        }),
+        MessageGroupId=sub,
+        MessageDeduplicationId=title_id
+    )
+
+    return {"ok": True, "title_id": title_id}
 
 # region get-titles-all
 @router.get("/get-titles-all/")
