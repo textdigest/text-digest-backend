@@ -37,7 +37,7 @@ class WebSocketStream:
         )
         self.is_connected = True
     
-    async def send_chunk(self, content: str, event: str):
+    async def send_chunk(self, content: Any, event: str):
         if not self.is_connected:
             connection_id = get_user_connection(self.user_id)
             if connection_id:
