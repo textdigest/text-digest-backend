@@ -64,5 +64,5 @@ jobs:
                     -var "image_tag=${IMAGE_TAG}" \
                     -var "google_client_id=${{ secrets.TF_VAR_GOOGLE_CLIENT_ID }}" \
                     -var "google_client_secret=${{ secrets.TF_VAR_GOOGLE_CLIENT_SECRET }}" \
-                    -var "modal_process=${{ secrets.TF_VAR_MODAL_PROCESS }}"
+                    -var "modal_process=${{ secrets.TF_VAR_MODAL_PROCESS }}" \
                     -var "openai_api_key=${{ secrets.TF_VAR_OPENAI_API_KEY }}"
