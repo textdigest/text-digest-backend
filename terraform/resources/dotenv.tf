@@ -8,6 +8,7 @@ locals {
     POOL_ID                     = aws_cognito_user_pool.this.id
     CLIENT_ID                   = aws_cognito_user_pool_client.this.id
     WEBSOCKET_API_GATEWAY       = "${aws_apigatewayv2_api.ws_api.api_endpoint}/${aws_apigatewayv2_stage.ws_stage.name}"
+    OPENAI_API_KEY              = var.openai_api_key
   }
 }
 
