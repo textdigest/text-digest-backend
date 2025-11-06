@@ -28,6 +28,7 @@ class AsyncAgentRunner(TypedDict):
     agent_name: str
     agent_params: Any
     user_id: str
+    conversation_id: str
 
 def handler(event, context) -> None:
     record = event['Records'][0]
@@ -45,13 +46,14 @@ def handler(event, context) -> None:
             query: str = queue_data['agent_params']['query']
             highlighted_text: str = queue_data['agent_params']['highlighted_text']
             page_content: str = queue_data['agent_params']['page_content']
+            conversation_id = queue_data['conversation_id']
 
             async def run_agent():
-                await ws.send_chunk(None, "turn-start")
+                await ws.send_chunk(None, "turn-start", conversation_id)
                 stream_res = await stream_run(
                     agent=qna_agent,
                     input_items=curr_conversation,
-                    stream_callback=ws.send_chunk,
+                    stream_callback=lambda chunk, event: ws.send_chunk(chunk, event, conversation_id),
                     context=QnaAgentContext(
                         query=query,
                         highlighted_text=highlighted_text,
@@ -59,11 +61,11 @@ def handler(event, context) -> None:
                     ),
                 )
                 conversation = stream_res.to_input_list()
-                await ws.send_chunk(conversation, "turn-over")
+                await ws.send_chunk(conversation, "turn-over", conversation_id)
 
             asyncio.run(run_agent())
 
     except Exception as e:
-        asyncio.run(ws.send_chunk(None, "error"))
+        asyncio.run(ws.send_chunk(None, "error", queue_data.get('conversation_id')))
         logger.error(e)
     
