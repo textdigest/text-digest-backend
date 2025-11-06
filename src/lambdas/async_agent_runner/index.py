@@ -38,6 +38,8 @@ def handler(event, context) -> None:
 
     queue_data: AsyncAgentRunner = json.loads(body)
 
+    logger.info("Queue data: %s", json.dumps(queue_data, indent=4))
+
     ws = WebSocketStream('reader-qna', queue_data['user_id'])
     try:
         if queue_data['agent_name'] == 'qna_agent':
