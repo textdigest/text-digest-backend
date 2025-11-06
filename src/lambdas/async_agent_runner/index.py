@@ -37,9 +37,9 @@ def handler(event, context) -> None:
 
     queue_data: AsyncAgentRunner = json.loads(body)
 
+    ws = WebSocketStream('reader-qna', queue_data['user_id'])
     try:
         if queue_data['agent_name'] == 'qna_agent':
-            ws = WebSocketStream('reader-qna', queue_data['user_id'])
 
             curr_conversation: list[TResponseInputItem] = queue_data['agent_params']['curr_conversation']
             query: str = queue_data['agent_params']['query']
@@ -64,5 +64,6 @@ def handler(event, context) -> None:
             asyncio.run(run_agent())
 
     except Exception as e:
+        asyncio.run(ws.send_chunk(None, "error"))
         logger.error(e)
     
