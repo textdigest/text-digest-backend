@@ -29,7 +29,7 @@ class AsyncAgentRunner(TypedDict):
     agent_params: Any
     user_id: str
 
-async def handler(event, context) -> None:
+def handler(event, context) -> None:
     record = event['Records'][0]
     body = record.get('body')
     if body is None:
@@ -39,23 +39,29 @@ async def handler(event, context) -> None:
 
     try:
         if queue_data['agent_name'] == 'qna_agent':
-            ws = WebSocketStream('library', queue_data['user_id'])
+            ws = WebSocketStream('reader-qna', queue_data['user_id'])
 
             curr_conversation: list[TResponseInputItem] = queue_data['agent_params']['curr_conversation']
             query: str = queue_data['agent_params']['query']
             highlighted_text: str = queue_data['agent_params']['highlighted_text']
             page_content: str = queue_data['agent_params']['page_content']
 
-            stream_res = await stream_run(
-                agent=qna_agent,
-                input_items=curr_conversation,
-                stream_callback=ws.send_chunk,
-                context=QnaAgentContext(
-                    query=query,
-                    highlighted_text=highlighted_text,
-                    page_content=page_content,
-                ),
-            )
+            async def run_agent():
+                await ws.send_chunk(None, "turn-start")
+                stream_res = await stream_run(
+                    agent=qna_agent,
+                    input_items=curr_conversation,
+                    stream_callback=ws.send_chunk,
+                    context=QnaAgentContext(
+                        query=query,
+                        highlighted_text=highlighted_text,
+                        page_content=page_content,
+                    ),
+                )
+                conversation = stream_res.to_input_list()
+                await ws.send_chunk(conversation, "turn-over")
+
+            asyncio.run(run_agent())
 
     except Exception as e:
         logger.error(e)
