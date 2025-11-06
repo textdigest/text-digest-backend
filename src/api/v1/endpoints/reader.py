@@ -25,6 +25,7 @@ class PostQnaRequest(BaseModel):
     highlighted_text: str
     page_content: str
     curr_conversation: List[TResponseInputItem]
+    conversation_id: str
 
 @router.post("/post-qna")
 async def post_qna_message(request: Request, body: PostQnaRequest):
@@ -42,10 +43,11 @@ async def post_qna_message(request: Request, body: PostQnaRequest):
                 "highlighted_text": body.highlighted_text,
                 "page_content": body.page_content,
             },
-            "user_id": user_id
+            "user_id": user_id,
+            "conversation_id": body.conversation_id
         }),
         MessageGroupId=user_id,
-        MessageDeduplicationId=f"{user_id}-{hash(json.dumps(body.dict()))}"
+        MessageDeduplicationId=f"{user_id}-{body.conversation_id}-{hash(json.dumps(body.dict()))}"
     )
 
     return {"ok": True}

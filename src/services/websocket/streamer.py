@@ -37,7 +37,7 @@ class WebSocketStream:
         )
         self.is_connected = True
     
-    async def send_chunk(self, content: Any, event: str):
+    async def send_chunk(self, content: Any, event: str, conversation_id: Optional[str] = None):
         if not self.is_connected:
             connection_id = get_user_connection(self.user_id)
             if connection_id:
@@ -53,6 +53,8 @@ class WebSocketStream:
                 'body': content,
                 'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
             }
+            if conversation_id:
+                message['conversation_id'] = conversation_id
             self.apigw_client.post_to_connection(
                 ConnectionId=self.connection_id,
                 Data=json.dumps(message)
