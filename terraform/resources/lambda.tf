@@ -94,6 +94,30 @@ resource "aws_lambda_event_source_mapping" "async_pdf_extract_from_sqs" {
   batch_size       = 1
 }
 
+resource "aws_lambda_function" "async_agent_runner" {
+  function_name = "${var.project_name}-${var.environment}-async-agent-runner"
+  package_type  = "Image"
+  image_uri     = "${aws_ecr_repository.api.repository_url}:${var.image_tag}"
+  role          = aws_iam_role.lambda_exec.arn
+
+  timeout     = 900
+  memory_size = 1024
+
+  image_config {
+    command = ["lambdas.async_agent_runner.index.handler"]
+  }
+
+  environment {
+    variables = local.dotenv
+  }
+}
+
+resource "aws_lambda_event_source_mapping" "async_agent_runner_from_sqs" {
+  event_source_arn = aws_sqs_queue.async_agent_runner.arn
+  function_name    = aws_lambda_function.async_agent_runner.arn
+  batch_size       = 1
+}
+
 resource "aws_lambda_function" "ws_connect" {
   function_name = "${var.project_name}-${var.environment}-ws-connect"
   package_type  = "Image"
