@@ -10,7 +10,7 @@ import boto3
 import os
 import json
 
-from services.library.format_ddb_entry import deserialize_ddb_title_item, serialize_title, Title, DdbTitleItem
+from services.library.format_ddb_entry import deserialize_ddb_title_item, serialize_title, Title, DdbTitleItem, is_valid_title_item
 from services.library.upload_to_s3 import get_presigned_put_url
 
 from util.tokens.verifyIdToken import verify_token
@@ -134,12 +134,24 @@ async def get_titles_all(request: Request):
 
     result: List[Title] = []
     for item in user_titles["Items"]:
-        title_obj, ddb_item = deserialize_ddb_title_item(item)
-        result.append(title_obj)
+        # Filter out non-title items (e.g., notes/annotations) before deserialization
+        if is_valid_title_item(item):
+            try:
+                title_obj, ddb_item = deserialize_ddb_title_item(item)
+                result.append(title_obj)
+            except Exception:
+                # Skip items that fail deserialization (e.g., malformed title items)
+                continue
     
     for item in public_titles["Items"]:
-        title_obj, ddb_item = deserialize_ddb_title_item(item)
-        result.append(title_obj)
+        # Filter out non-title items (e.g., notes/annotations) before deserialization
+        if is_valid_title_item(item):
+            try:
+                title_obj, ddb_item = deserialize_ddb_title_item(item)
+                result.append(title_obj)
+            except Exception:
+                # Skip items that fail deserialization (e.g., malformed title items)
+                continue
         
     return result
 
@@ -195,7 +207,13 @@ async def delete_title(id: str, request: Request):
 
 # region post-note
 @router.patch("/post-note")
-async def post_note(request: Request, text: str, page_num: int, book_title: str):
+async def post_note(
+    request: Request,
+    text: str,
+    page_num: int,
+    book_title: str,
+    annotation: str | None = None,
+):
     dynamodb = boto3.resource("dynamodb", region_name=REGION)
     table = dynamodb.Table(DDB_TABLE_NAME)
 
@@ -206,9 +224,10 @@ async def post_note(request: Request, text: str, page_num: int, book_title: str)
     sk = f"TITLE#{book_title}"
 
     new_note = {
-            "comment": text,
-            "page_num": page_num,
-            "book_title": book_title, 
+        "text": text,
+        "annotation": annotation or "",
+        "page_num": page_num,
+        "book_title": book_title, 
     }
 
     try:
@@ -250,4 +269,8 @@ async def get_notes(request: Request, book_title:str):
 
     notes = resp["Item"].get("notes", [])
     
-    return {"book_title": book_title, "count": len(notes), "notes": notes} # type: ignore
+    return {
+        "book_title": book_title,
+        "count": len(notes),
+        "notes": notes
+    } # type: ignore
