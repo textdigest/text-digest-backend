@@ -62,6 +62,7 @@ class PostVerbalQnaRequest(BaseModel):
     page_content: str
     curr_conversation: List[TResponseInputItem]
     conversation_id: str
+    file_extension: str = "webm"
 
 @router.post("/post-verbal-qna")
 async def post_verbal_qna_message(request: Request, body: PostVerbalQnaRequest):
@@ -69,7 +70,7 @@ async def post_verbal_qna_message(request: Request, body: PostVerbalQnaRequest):
 
     user_id = verify_token(auth_header)
 
-    query_text = transcribe_audio_from_base64(body.audio_base64)
+    query_text = transcribe_audio_from_base64(body.audio_base64, body.file_extension)
 
     user_message: TResponseInputItem = {
         "role": "user",
