@@ -53,6 +53,20 @@ class Title(BaseModel):
     notes: list
     last_viewed: Optional[str] = None
 
+def is_valid_title_item(ddb_book_item: dict[str, AttributeValueTypeDef]) -> bool:
+    """
+    Check if a DynamoDB item is a valid title item by verifying it has required fields.
+    This filters out note/annotation items that might have SK starting with 'TITLE#'.
+    """
+    try:
+        item = {k: ddb_deserializer.deserialize(v) for k, v in ddb_book_item.items()}
+        
+        # Check for required title fields
+        required_fields = ['title', 'author', 'date_published', 'date_downloaded', 'num_of_pages', 'pdf_link']
+        return all(field in item for field in required_fields)
+    except Exception:
+        return False
+
 def deserialize_ddb_title_item(ddb_book_item: dict[str, AttributeValueTypeDef]) -> tuple[Title, DdbTitleItem]:
     item = {k: ddb_deserializer.deserialize(v) for k, v in ddb_book_item.items()}
     
